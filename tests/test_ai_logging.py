@@ -300,17 +300,10 @@ def run_single_ai_logging_test(test_config):
                 f"Expected {expected_count} events but got {event_count} for test {test_config['name']}"
             )
         else:
-            # When no specific count is given, just verify that events were generated (or not)
-            if test_config.get("disable_ai_cat") == "all":
-                # When all AI categories are disabled, should have minimal events (just dftracer init)
-                assert event_count > 0 and event_count < 10, (
-                    f"Expected minimal events when all AI categories disabled but got {event_count} for test {test_config['name']}"
-                )
-            else:
-                # Normal case - should have some events
-                assert event_count > 5, (
-                    f"Expected some events but got {event_count} for test {test_config['name']}"
-                )
+            # Normal case - should have some events
+            assert event_count > 5, (
+                f"Expected some events but got {event_count} for test {test_config['name']}"
+            )
     finally:
         shutil.rmtree(test_base_dir, ignore_errors=True)
 

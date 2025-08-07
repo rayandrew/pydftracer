@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+tests/test_ai_logging_subprocess/
+tests/test_dftracer_subprocess/

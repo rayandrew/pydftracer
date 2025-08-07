@@ -37,10 +37,10 @@ Documentation = "https://dftracer.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 full = [
-    # "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
+    "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
 ]
 dev = [
-    # "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
+    "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
     "pytest>=6.0",
     "pytest-cov",
     "pytest-xdist",
@@ -48,6 +48,7 @@ dev = [
     "numpy",
     "pillow",
     "ruff",
+    "mypy"
 ]
 
 [tool.setuptools.package-dir]
