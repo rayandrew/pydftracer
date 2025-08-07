@@ -216,6 +216,30 @@ class TestDftFn:
         result = TestClass.static_method(4)
         assert result == 12
 
+    def test_dft_fn_log_static_regular_function(self):
+        fn = dft_fn("test")
+
+        # Test log_static on a regular function
+        @fn.log_static
+        def regular_function(x):
+            return x * 4
+
+        result = regular_function(3)
+        assert result == 12
+
+    def test_dft_fn_log_static_with_parentheses(self):
+        fn = dft_fn("test")
+
+        # Test log_static() with parentheses
+        class TestClass:
+            @fn.log_static()
+            @staticmethod
+            def static_method(x):
+                return x * 5
+
+        result = TestClass.static_method(2)
+        assert result == 10
+
     def test_dft_fn_iter_method(self):
         fn = dft_fn("data")
 

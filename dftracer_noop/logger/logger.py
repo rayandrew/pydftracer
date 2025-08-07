@@ -172,13 +172,23 @@ class dft_fn:
         self, f_py: Optional[F] = None, name: Optional[str] = None
     ) -> Union[F, Callable[[F], F]]:
         def _decorator(func: F) -> F:
-            @wraps(func)
+            # Extract actual function if we received a staticmethod object
+            if isinstance(func, staticmethod):
+                actual_func = func.__func__
+            else:
+                actual_func = func
+
+            @wraps(actual_func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
-                return func(*args, **kwargs)
+                return actual_func(*args, **kwargs)
 
             return wrapper  # type: ignore
 
-        return _decorator(f_py) if callable(f_py) else _decorator
+        # Handle both callable functions and staticmethod objects
+        if f_py is not None:
+            return _decorator(f_py)
+        else:
+            return _decorator
 
     def log_metadata(self, key: str, value: str) -> None:
         pass
