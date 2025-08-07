@@ -12,7 +12,7 @@ class LowercaseStringEnum(str, Enum):
     def __new__(cls, value, *args, **kwargs):
         # this is a specific version that will lowercase the values
         if not isinstance(value, (str, auto)):
-            raise TypeError(
+            raise TypeError(  # pragma: no cover
                 f"Values of StrEnums must be strings: {value!r} is a {type(value)}"
             )
         return super().__new__(cls, value, *args, **kwargs)
