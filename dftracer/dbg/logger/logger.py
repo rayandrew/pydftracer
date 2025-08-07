@@ -65,7 +65,16 @@ class NoOpProfiler:
     def exit_event(self) -> None:
         pass
 
-    def log_event(self, name: str, cat: str, start_time: int, duration: int, string_args: Optional[Dict[str, Any]] = None) -> None:
+    def log_event(
+        self,
+        name: str,
+        cat: str,
+        start_time: int,
+        duration: int,
+        int_args: Dict[str, Any] = {},
+        string_args: Dict[str, Any] = {},
+        float_args: Dict[str, float] = {},
+    ) -> None:
         pass
 
     def log_metadata_event(self, key: str, value: str) -> None:
@@ -460,13 +469,13 @@ class dft_fn:
     ) -> Union[F, Callable[[F], F]]:
         # CC BY-SA 4.0 https://stackoverflow.com/a/60832711
         def _decorator(func: F) -> F:
-            _name = name if name else func.__qualname__
-
             # Extract actual function if we received a staticmethod object
             if isinstance(func, staticmethod):
                 actual_func = func.__func__
             else:
                 actual_func = func
+
+            _name = name if name else func.__qualname__
 
             @wraps(actual_func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
