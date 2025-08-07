@@ -87,7 +87,8 @@ class NoOpProfiler:
 profiler: ProfilerProtocol
 try:
     import pydftracer as profiler  # type: ignore
-except ImportError:
+except ImportError as e:
+    print("cannot import", e)
     profiler = NoOpProfiler()
     DFTRACER_ENABLE = False
 

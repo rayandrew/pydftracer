@@ -30,11 +30,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e .[dev]
-        pip install pytest pytest-cov
 
-    - name: Run tests with coverage
+    - name: Run tests
       run: |
-        pytest tests/ --cov=dftracer --cov-report=xml --cov-report=term-missing -v
+        make test-parallel
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -60,17 +59,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
-        pip install ruff mypy
+        pip install -e .[dev]
 
-    - name: Run ruff (linter and formatter)
+    - name: Run linter and formatter
       run: |
-        ruff check .
-        ruff format --check .
+        make lint
+        make format-check
 
-    - name: Run mypy (type checker)
+    - name: Run type checker
       run: |
-        mypy dftracer --ignore-missing-imports
+        make type-check
 
   package:
     name: Build and test package
@@ -119,12 +117,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-cov
+        pip install -e .[dev]
 
     - name: Generate coverage report
       run: |
-        pytest tests/ --cov=dftracer --cov-report=html --cov-report=term
+        pytest tests/ --cov=dftracer --cov-report=html --cov-report=term -n 2
 
     - name: Upload coverage report as artifact
       uses: actions/upload-artifact@v3

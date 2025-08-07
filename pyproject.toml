@@ -37,12 +37,13 @@ Documentation = "https://dftracer.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 full = [
-    "pydftracer"
+    # "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
 ]
 dev = [
-    "pydftracer",
+    # "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
     "pytest>=6.0",
     "pytest-cov",
+    "pytest-xdist",
     "h5py",
     "numpy",
     "pillow",
@@ -58,7 +59,11 @@ testpaths = [
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers"
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "subprocess: marks tests that run in subprocess",
+]
 
 [tool.coverage.run]
 source = ["dftracer"]

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 import os
 import shutil
+import subprocess
+import sys
+import tempfile
 
 import h5py
 import numpy as np
@@ -11,31 +14,89 @@ from dftracer.logger import dft_fn as Profile
 from dftracer.logger import dftracer
 
 
-def create_data_gen_function(df, args, io):
-    """Create data generation function with given parameters"""
+def run_single_dftracer_test(test_config):
+    """Run a single dftracer test in isolation - suitable for subprocess execution"""
+    test_format = test_config["format"]
+    num_files = test_config["num_files"]
+    niter = test_config["niter"]
+    record_size = test_config["record_size"]
 
-    @df.log
-    def data_gen(data):
-        for i in df.iter(range(args.num_files)):
-            io.write(
-                f"{args.data_dir}/{args.format}/{i}-of-{args.num_files}.{args.format}",
-                data,
+    # Set environment variables
+    for env_var, value in test_config["env"].items():
+        os.environ[env_var] = value
+
+    # Create test directories with unique names per test
+    base_dir = os.path.join(os.path.dirname(__file__), "test_dftracer_subprocess")
+    test_name = f"{test_config['name']}_{test_format}_{num_files}_{niter}_{record_size}"
+    test_base_dir = os.path.join(base_dir, test_name)
+    data_dir = os.path.join(test_base_dir, "data")
+    pfw_logs_dir = os.path.join(test_base_dir, "pfw_logs")
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(pfw_logs_dir, exist_ok=True)
+
+    if (
+        "DFTRACER_DATA_DIR" not in test_config["env"]
+        or test_config["env"]["DFTRACER_DATA_DIR"] != "all"
+    ):
+        os.environ["DFTRACER_DATA_DIR"] = data_dir
+
+    # Create format-specific directories
+    format_data_dir = os.path.join(data_dir, test_format)
+    format_log_dir = os.path.join(pfw_logs_dir, test_format)
+    os.makedirs(format_data_dir, exist_ok=True)
+    os.makedirs(format_log_dir, exist_ok=True)
+
+    # Initialize IOHandler and dftracer
+    io = IOHandler(test_format)
+    log_file = os.path.join(pfw_logs_dir, f"{test_config['name']}_{test_format}.pfw")
+    print(f"Running test {test_config['name']} with log file: {log_file}")
+
+    df_logger = dftracer.initialize_log(log_file, data_dir, -1)
+
+    data = np.ones((record_size, 1), dtype=np.uint8)
+    df_test = Profile(f"dft_{test_config['name']}")
+
+    @df_test.log
+    def test_data_gen(test_data):
+        for i in df_test.iter(range(num_files)):
+            filename = os.path.join(
+                format_data_dir, f"{i}-of-{num_files}.{test_format}"
+            )
+            io.write(filename, test_data)
+
+    @df_test.log
+    def test_read_data(epoch):
+        for i in df_test.iter(range(num_files)):
+            filename = os.path.join(
+                format_data_dir, f"{i}-of-{num_files}.{test_format}"
+            )
+            io.read(filename)
+
+    # Execute the test workflow
+    test_data_gen(data)
+    for n in range(niter):
+        test_read_data(n)
+    df_logger.finalize()
+
+    # Verify files were created (except when DFTRACER is disabled)
+    if test_config["env"].get("DFTRACER_ENABLE") != "0":
+        for i in range(num_files):
+            filename = os.path.join(
+                format_data_dir, f"{i}-of-{num_files}.{test_format}"
+            )
+            assert os.path.exists(filename), (
+                f"Data file {filename} should exist for test {test_config['name']}"
             )
 
-    return data_gen
+    print(f"Test {test_config['name']} completed successfully")
 
+    # Clean up after verification is complete
+    try:
+        shutil.rmtree(test_base_dir, ignore_errors=True)
+    except Exception as e:
+        print(f"Warning: Failed to clean up test directory {test_base_dir}: {e}")
 
-def create_read_data_function(df, args, io):
-    """Create data reading function with given parameters"""
-
-    @df.log
-    def read_data(epoch):
-        for i in df.iter(range(args.num_files)):
-            io.read(
-                f"{args.data_dir}/{args.format}/{i}-of-{args.num_files}.{args.format}"
-            )
-
-    return read_data
+    return True
 
 
 class IOHandler:
@@ -66,41 +127,6 @@ class IOHandler:
             fd.close()
 
 
-@pytest.fixture(scope="function")
-def setup_test_output_dirs():
-    """Basic fixture for simple tests"""
-    base_dir = os.path.join(os.path.dirname(__file__), "test_dftracer_output")
-    data_dir = os.path.join(base_dir, "data")
-    pfw_logs_dir = os.path.join(base_dir, "pfw_logs")
-    os.makedirs(data_dir, exist_ok=True)
-    os.makedirs(pfw_logs_dir, exist_ok=True)
-    yield data_dir, pfw_logs_dir
-    # Cleanup after test
-    shutil.rmtree(base_dir, ignore_errors=True)
-
-
-@pytest.fixture(scope="function")
-def setup_parameterized_test_dirs():
-    """Fixture for parameterized tests with specific directory structure"""
-    test_dirs = []
-
-    base_dir = os.path.join(os.path.dirname(__file__), "test_dftracer_output")
-
-    def create_test_dir(test_format, num_files, niter, record_size):
-        test_name = f"{test_format}_{num_files}_{niter}_{record_size}"
-        test_base_dir = os.path.join(base_dir, test_name)
-        data_dir = os.path.join(test_base_dir, "data")
-        pfw_logs_dir = os.path.join(test_base_dir, "pfw_logs")
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(pfw_logs_dir, exist_ok=True)
-        test_dirs.append(base_dir)
-        return data_dir, pfw_logs_dir, base_dir
-
-    yield create_test_dir
-
-    shutil.rmtree(base_dir)
-
-
 class TestDFTracerLogger:
     def test_dftracer_singleton(self):
         instance1 = dftracer.get_instance()
@@ -108,6 +134,7 @@ class TestDFTracerLogger:
         assert instance1 is instance2
         assert isinstance(instance1, dftracer)
 
+    @pytest.mark.subprocess
     @pytest.mark.parametrize(
         "test_config",
         [
@@ -165,81 +192,52 @@ class TestDFTracerLogger:
             },
         ],
     )
-    def test_dftracer_io_operations_parameterized(
-        self, setup_parameterized_test_dirs, test_config, monkeypatch
-    ):
-        """Parameterized test matching CMake test configurations"""
+    def test_dftracer_subprocess_execution(self, test_config):
+        """Run each dftracer test configuration in a separate subprocess"""
 
-        # Test parameters from config
-        test_format = test_config["format"]
-        num_files = test_config["num_files"]
-        niter = test_config["niter"]
-        record_size = test_config["record_size"]
+        # Create a temporary Python script that runs the test
+        script_content = f'''
+import sys
+import os
+sys.path.insert(0, "{os.path.dirname(os.path.dirname(__file__))}")
 
-        data_dir, pfw_logs_dir, base_dir = setup_parameterized_test_dirs(
-            test_format, num_files, niter, record_size
-        )
+from tests.test_dftracer import run_single_dftracer_test
 
-        for env_var, value in test_config["env"].items():
-            monkeypatch.setenv(env_var, value)
+test_config = {test_config!r}
 
-        if (
-            "DFTRACER_DATA_DIR" not in test_config["env"]
-            or test_config["env"]["DFTRACER_DATA_DIR"] != "all"
-        ):
-            monkeypatch.setenv("DFTRACER_DATA_DIR", data_dir)
+if __name__ == "__main__":
+    try:
+        result = run_single_dftracer_test(test_config)
+        sys.exit(0 if result else 1)
+    except Exception as e:
+        print(f"Test failed with error: {{e}}")
+        sys.exit(1)
+'''
 
-        # Create format-specific directories within the test directory
-        format_data_dir = os.path.join(data_dir, test_format)
-        format_log_dir = os.path.join(pfw_logs_dir, test_format)
-        os.makedirs(format_data_dir, exist_ok=True)
-        os.makedirs(format_log_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(script_content)
+            script_path = f.name
 
-        # Initialize IOHandler and dftracer
-        io = IOHandler(test_format)
-        log_file = os.path.join(
-            pfw_logs_dir, f"{test_config['name']}_{test_format}.pfw"
-        )
-        df_logger = dftracer.initialize_log(log_file, data_dir, -1)
+        try:
+            # Run the test in a subprocess
+            result = subprocess.run(
+                [sys.executable, script_path],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
 
-        data = np.ones((record_size, 1), dtype=np.uint8)
-        df_test = Profile(f"dft_{test_config['name']}")
+            print(f"Test {test_config['name']} subprocess output:")
+            print(result.stdout)
+            if result.stderr:
+                print(f"Test {test_config['name']} subprocess errors:")
+                print(result.stderr)
 
-        @df_test.log
-        def test_data_gen(test_data):
-            for i in df_test.iter(range(num_files)):
-                filename = os.path.join(
-                    format_data_dir, f"{i}-of-{num_files}.{test_format}"
-                )
-                io.write(filename, test_data)
+            assert result.returncode == 0, (
+                f"Test {test_config['name']} failed in subprocess"
+            )
 
-        @df_test.log
-        def test_read_data(epoch):
-            for i in df_test.iter(range(num_files)):
-                filename = os.path.join(
-                    format_data_dir, f"{i}-of-{num_files}.{test_format}"
-                )
-                io.read(filename)
-
-        test_data_gen(data)
-        for n in range(niter):
-            test_read_data(n)
-        df_logger.finalize()
-
-        if test_config["env"].get("DFTRACER_ENABLE") != "0":
-            for i in range(num_files):
-                filename = os.path.join(
-                    format_data_dir, f"{i}-of-{num_files}.{test_format}"
-                )
-                assert os.path.exists(filename), (
-                    f"Data file {filename} should exist for test {test_config['name']}"
-                )
-
-        # Log file verification - in this implementation, we're using a NoOp profiler
-        # so log files may not be created, but we can check if the test ran successfully
-        if test_config["env"].get("DFTRACER_ENABLE") == "1":
-            print(f"Test {test_config['name']} would create log file: {log_file}")
-
-        print(
-            f"Test {test_config['name']} completed successfully in directory: {base_dir}"
-        )
+        finally:
+            # Clean up temporary script
+            if os.path.exists(script_path):
+                os.unlink(script_path)

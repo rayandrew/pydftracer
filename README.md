@@ -1,6 +1,23 @@
 # pydftracer
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](#### Running Tests
+
+```bash
+# Install development dependencies
+pip install -e .[dev]
+
+# Using Make (recommended)
+make test-parallel        # Run all tests with parallel execution
+make test-subprocess      # Run only subprocess-based dftracer tests  
+make test-ci             # Run comprehensive tests matching CI configuration
+make test-ci-quick       # Run quick tests and checks (faster)
+make check-all           # Run all quality checks (lint, format, type-check, test)
+
+# Using pytest directly
+pytest tests/ -v -n 2                                    # All tests with parallel execution
+pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 2  # Tests with coverage
+pytest tests/ -m subprocess -v -n 2                      # Only subprocess tests
+```io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 A no operation (**No-Op**) Python binding for [DFTracer](https://github.com/hariharan-devarajan/dftracer) that provides seamless API compatibility without requiring the full DFTracer installation. Perfect for testing, development, and environments where you want to use DFTracer's API without the overhead of actual tracing.
@@ -22,6 +39,49 @@ pip install dftracer
 * Integrating DFTracer: [https://dftracer.readthedocs.io/en/latest/examples.html](https://dftracer.readthedocs.io/en/latest/examples.html)
 * Visualizing DFTracer Traces: [https://dftracer.readthedocs.io/en/latest/perfetto.html](https://dftracer.readthedocs.io/en/latest/perfetto.html)
 * Building DFAnalyzer: [https://dftracer.readthedocs.io/en/latest/dfanalyzer_build.html](https://dftracer.readthedocs.io/en/latest/dfanalyzer_build.html)
+
+## Development
+
+### Testing
+
+This project uses a comprehensive test suite with subprocess-based isolation for proper dftracer testing.
+
+#### Running Tests
+
+```bash
+# Install development dependencies
+pip install -e .[dev]
+
+# Using Make (recommended)
+make test-parallel    # Run all tests with parallel execution
+make test-subprocess  # Run only subprocess-based dftracer tests  
+make test-ci          # Run tests matching CI configuration
+make check-all        # Run all quality checks (lint, format, type-check, test)
+
+# Using pytest directly
+pytest tests/ -v -n 2                                    # All tests with parallel execution
+pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 2  # Tests with coverage
+pytest tests/ -m subprocess -v -n 2                      # Only subprocess tests
+
+# Use the provided test script (matches CI)
+./scripts/test.sh
+```
+
+#### Test Structure
+
+- **Unit Tests**: General functionality tests in `tests/test_general.py`
+- **Integration Tests**: Subprocess-based dftracer tests in `tests/test_dftracer.py`
+- **Parallel Execution**: Tests run in parallel using `pytest-xdist` for faster execution
+- **Process Isolation**: dftracer tests run in separate subprocesses to handle the per-process nature of dftracer
+
+#### CI/CD
+
+The project uses GitHub Actions for continuous integration with:
+- Multi-Python version testing (3.9, 3.10, 3.11, 3.12)
+- Parallel test execution with coverage reporting
+- Code linting with `ruff`
+- Type checking with `mypy`
+- Package building and installation testing
 
 ## Citation and Reference
 
