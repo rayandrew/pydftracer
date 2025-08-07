@@ -9,7 +9,7 @@ on:
 
 jobs:
   test-and-lint:
-    name: Test, Lint, and Build - Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Py${{ matrix.python-version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -74,7 +74,7 @@ jobs:
 
     - name: Upload coverage report as artifact
       if: matrix.python-version == '3.11' && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report-${{ matrix.python-version }}
         path: htmlcov/
