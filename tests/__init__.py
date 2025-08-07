@@ -1,1 +1,1 @@
-"""Test package for dftracer_noop."""
+"""Test package for dftracer"""

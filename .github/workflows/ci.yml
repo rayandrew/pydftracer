@@ -29,12 +29,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e .[dev]
         pip install pytest pytest-cov
 
     - name: Run tests with coverage
       run: |
-        pytest tests/ --cov=dftracer_noop --cov-report=xml --cov-report=term-missing -v
+        pytest tests/ --cov=dftracer --cov-report=xml --cov-report=term-missing -v
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -70,7 +70,7 @@ jobs:
 
     - name: Run mypy (type checker)
       run: |
-        mypy dftracer_noop --ignore-missing-imports
+        mypy dftracer --ignore-missing-imports
 
   package:
     name: Build and test package
@@ -100,7 +100,7 @@ jobs:
     - name: Test package installation
       run: |
         pip install dist/*.whl
-        python -c "import dftracer_noop; print('Package import successful')"
+        python -c "import dftracer; print('Package import successful')"
 
   coverage-report:
     name: Coverage Report
@@ -124,7 +124,7 @@ jobs:
 
     - name: Generate coverage report
       run: |
-        pytest tests/ --cov=dftracer_noop --cov-report=html --cov-report=term
+        pytest tests/ --cov=dftracer --cov-report=html --cov-report=term
 
     - name: Upload coverage report as artifact
       uses: actions/upload-artifact@v3

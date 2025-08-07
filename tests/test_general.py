@@ -1,11 +1,14 @@
-"""Test suite for dftracer_noop package."""
+"""Test suite for dftracer package."""
 
 from typing import List
 
 import pytest
 
-from dftracer_noop.logger.ai import (
+from dftracer.logger.ai import (
     _AI,
+    BLOCK_NAME,
+    CTX_SEPARATOR,
+    ITER_NAME,
     CommunicationEvent,
     ComputeEvent,
     DataEvent,
@@ -25,9 +28,11 @@ from dftracer_noop.logger.ai import (
     data,
     dataloader,
     device,
+    get_iter_block_name,
+    get_iter_handle_name,
     pipeline,
 )
-from dftracer_noop.logger.logger import DFTRACER_ENABLE, dft_fn, dftracer
+from dftracer.logger.logger import dft_fn, dftracer
 
 
 class TestDFTracerLogger:
@@ -61,7 +66,8 @@ class TestDftFn:
     def test_dft_fn_initialization(self):
         fn = dft_fn("compute")
         assert fn._cat == "compute"
-        assert fn._name == ""
+        # change this if function name changed
+        assert fn._name == "test_dft_fn_initialization"
         assert fn._enable is True
 
         fn = dft_fn(
@@ -254,10 +260,8 @@ class TestDftFn:
         fn.flush()
         fn.reset()
         fn.log_metadata("key", "value")
-
-        fn._arguments = {"test": "value"}
         fn.reset()
-        assert fn._arguments == {}
+        assert not fn._flush
 
 
 class TestAIModule:
@@ -456,7 +460,6 @@ class TestAIModule:
 
     def test_ai_iter_with_empty_arguments(self):
         """Test iter when profiler arguments are empty."""
-        from dftracer_noop.logger.ai import DFTracerAI, ProfileCategory
 
         # Create AI instance with no arguments
         ai_instance = DFTracerAI(cat=ProfileCategory.COMPUTE, name="test")
@@ -495,9 +498,8 @@ class TestAIModule:
 
         assert result2 == "disabled_context"
 
-    def test_string_enum_fallback(self):
-        """Test StringEnum implementation for Python < 3.11."""
-        from dftracer_noop.logger.ai import ProfileCategory
+    def test_string_enum(self):
+        """Test StringEnum implementation"""
 
         # Test enum values
         assert str(ProfileCategory.COMPUTE) == "compute"
@@ -602,15 +604,6 @@ class TestAIModule:
         assert epoch_func.__name__ == "epoch_func"
 
     def test_ai_helper_functions_edge_cases(self):
-        """Test edge cases for helper functions to achieve 100% coverage."""
-        from dftracer_noop.logger.ai import (
-            BLOCK_NAME,
-            CTX_SEPARATOR,
-            ITER_NAME,
-            get_iter_block_name,
-            get_iter_handle_name,
-        )
-
         # Test when name already ends with the separator and name
         block_name_with_suffix = f"test{CTX_SEPARATOR}{BLOCK_NAME}"
         result = get_iter_block_name(block_name_with_suffix)
@@ -724,15 +717,6 @@ class TestIntegration:
 
         result: str = training_step()
         assert result == "mixed_usage"
-
-
-class TestConstants:
-    def test_dftracer_enable_flag(self):
-        assert not DFTRACER_ENABLE
-
-        from dftracer_noop.logger.logger import DFTRACER_ENABLE as logger_enable
-
-        assert not logger_enable
 
 
 class TestErrorHandling:

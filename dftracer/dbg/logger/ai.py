@@ -3,11 +3,11 @@ from collections.abc import Iterator
 from enum import Enum, auto
 from typing import Any, Callable, Optional, TypeVar, Union, overload
 
-from dftracer_noop.logger.logger import dft_fn, dftracer
+from dftracer.dbg.logger.logger import DFTRACER_ENABLE, dft_fn, dftracer
 
 
 # MIT License: https://github.com/irgeek/StrEnum/blob/master/strenum/__init__.py
-# Support all python
+# To support StringEnum on all python versions
 class LowercaseStringEnum(str, Enum):
     def __new__(cls, value: Any, *args: Any, **kwargs: Any) -> "LowercaseStringEnum":
         # this is a specific version that will lowercase the values
@@ -161,7 +161,7 @@ class _DFTracerAI:
         # The underlying DFTracer logger was designed for one-time use objects, but this
         # class acts as a singleton. Without this reset, events won't flush after the
         # first __exit__ call due to DFTracer's internal _flush state management.
-        self.profiler._flush = False
+        self.profiler.set_flush(False)
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -209,8 +209,19 @@ class _DFTracerAI:
         image_size: Optional[Any] = None,
         args: Optional[dict[str, Any]] = None,
     ) -> "_DFTracerAI":
-        # DFTRACER_ENABLE is always False in no-op implementation
-        # All update operations are no-ops
+        if args is None:
+            args = {}
+        if DFTRACER_ENABLE and self.profiler._enable:
+            if epoch is not None:
+                self.profiler._arguments["epoch"] = str(epoch)
+            if step is not None:
+                self.profiler._arguments["step"] = str(step)
+            if image_idx is not None:
+                self.profiler._arguments["image_idx"] = str(image_idx)
+            if image_size is not None:
+                self.profiler._arguments["image_size"] = str(image_size)
+            for key, value in args.items():
+                self.profiler._arguments[key] = str(value)
         return self
 
     def iter(
@@ -222,10 +233,55 @@ class _DFTracerAI:
         iter_name: Optional[str] = None,
         block_name: Optional[str] = None,
     ) -> Iterator[T]:
-        # DFTRACER_ENABLE is always False in no-op implementation
-        # Simply yield all values without any tracing
-        for item in iterator:
-            yield item
+        iter_name = iter_name or get_iter_handle_name(self.profiler._name)
+        block_name = block_name or get_iter_block_name(self.profiler._name)
+        iter_val = 1
+
+        start: int = 0
+        if DFTRACER_ENABLE and self.profiler._enable:
+            self.profiler._arguments = {}
+            start = dftracer.get_instance().get_time()
+
+        for v in iterator:
+            if DFTRACER_ENABLE and self.profiler._enable:
+                end = dftracer.get_instance().get_time()
+                t0 = dftracer.get_instance().get_time()
+
+            yield v
+
+            if DFTRACER_ENABLE and self.profiler._enable:
+                t1 = dftracer.get_instance().get_time()
+                self.profiler._arguments[ITER_COUNT_NAME] = str(iter_val)
+                args = (
+                    self.profiler._arguments
+                    if len(self.profiler._arguments) > 0
+                    else None
+                )
+
+                if include_iter:
+                    dftracer.get_instance().enter_event()
+                    dftracer.get_instance().log_event(
+                        name=iter_name,
+                        cat=self.profiler._cat,
+                        start_time=start,
+                        duration=end - start,
+                        string_args=args,
+                    )
+                    dftracer.get_instance().exit_event()
+
+                if include_block:
+                    dftracer.get_instance().enter_event()
+                    dftracer.get_instance().log_event(
+                        name=block_name,
+                        cat=self.profiler._cat,
+                        start_time=t0,
+                        duration=t1 - t0,
+                        string_args=args,
+                    )
+                    dftracer.get_instance().exit_event()
+
+                iter_val += 1
+                start = dftracer.get_instance().get_time()
 
 
 class DFTracerAI(_DFTracerAI):
@@ -256,9 +312,15 @@ class DFTracerAI(_DFTracerAI):
             tracer = DFTracerAI(
                 cat=self.profiler._cat,
                 name=name,
-                epoch=self.profiler._arguments.get("epoch"),
-                step=self.profiler._arguments.get("step"),
-                image_idx=self.profiler._arguments.get("image_idx"),
+                epoch=int(self.profiler._arguments["epoch"])
+                if "epoch" in self.profiler._arguments
+                else None,
+                step=int(self.profiler._arguments["step"])
+                if "step" in self.profiler._arguments
+                else None,
+                image_idx=int(self.profiler._arguments["image_idx"])
+                if "image_idx" in self.profiler._arguments
+                else None,
                 image_size=self.profiler._arguments.get("image_size"),
                 enable=self.profiler._enable,
             )
@@ -308,9 +370,15 @@ class DFTracerAI(_DFTracerAI):
         child = DFTracerAI(
             cat=self.profiler._cat,
             name=_name,
-            epoch=self.profiler._arguments.get("epoch"),
-            step=self.profiler._arguments.get("step"),
-            image_idx=self.profiler._arguments.get("image_idx"),
+            epoch=int(self.profiler._arguments["epoch"])
+            if "epoch" in self.profiler._arguments
+            else None,
+            step=int(self.profiler._arguments["step"])
+            if "step" in self.profiler._arguments
+            else None,
+            image_idx=int(self.profiler._arguments["image_idx"])
+            if "image_idx" in self.profiler._arguments
+            else None,
             image_size=self.profiler._arguments.get("image_size"),
             enable=self.profiler._enable,
         )
@@ -379,9 +447,15 @@ class DFTracerAI(_DFTracerAI):
         child = DFTracerAI(
             cat=self.profiler._cat,
             name=_name,
-            epoch=self.profiler._arguments.get("epoch"),
-            step=self.profiler._arguments.get("step"),
-            image_idx=self.profiler._arguments.get("image_idx"),
+            epoch=int(self.profiler._arguments["epoch"])
+            if "epoch" in self.profiler._arguments
+            else None,
+            step=int(self.profiler._arguments["step"])
+            if "step" in self.profiler._arguments
+            else None,
+            image_idx=int(self.profiler._arguments["image_idx"])
+            if "image_idx" in self.profiler._arguments
+            else None,
             image_size=self.profiler._arguments.get("image_size"),
             enable=self.profiler._enable,
         )

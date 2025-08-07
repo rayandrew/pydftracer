@@ -41,11 +41,14 @@ full = [
 ]
 dev = [
     "pytest>=6.0",
-    "pytest-cov"
+    "pytest-cov",
+    "h5py",
+    "numpy",
+    "pillow",
 ]
 
 [tool.setuptools.package-dir]
-dftracer_noop = "dftracer_noop"
+dftracer = "dftracer"
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -57,12 +60,12 @@ python_functions = "test_*"
 addopts = "-v --strict-markers"
 
 [tool.coverage.run]
-source = ["dftracer_noop"]
+source = ["dftracer"]
 omit = [
     "tests/*",
     "demo_*.py",
     "test_*.py",
-    "dftracer_noop/dbg/*",
+    "dftracer/dbg/*",
 ]
 
 [tool.coverage.report]
