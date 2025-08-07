@@ -4,8 +4,8 @@ import shutil
 
 import h5py
 import numpy as np
-from PIL import Image
 import pytest
+from PIL import Image
 
 from dftracer.logger import dft_fn as Profile
 from dftracer.logger import dftracer
