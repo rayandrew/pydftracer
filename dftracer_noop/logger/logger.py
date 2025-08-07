@@ -176,7 +176,7 @@ class dft_fn:
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 return func(*args, **kwargs)
 
-            return staticmethod(wrapper)  # type: ignore
+            return wrapper  # type: ignore
 
         return _decorator(f_py) if callable(f_py) else _decorator
 
