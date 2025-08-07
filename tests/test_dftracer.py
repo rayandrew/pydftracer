@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -90,11 +89,7 @@ def run_single_dftracer_test(test_config):
 
     print(f"Test {test_config['name']} completed successfully")
 
-    # Clean up after verification is complete
-    try:
-        shutil.rmtree(test_base_dir, ignore_errors=True)
-    except Exception as e:
-        print(f"Warning: Failed to clean up test directory {test_base_dir}: {e}")
+    # shutil.rmtree(test_base_dir, ignore_errors=True)
 
     return True
 

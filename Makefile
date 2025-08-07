@@ -11,15 +11,15 @@ install:
 test:
 	pytest tests/ --cov=dftracer --cov-report=term-missing -v
 
-test-parallel:
-	pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 4
+test-parallel: ## Run tests with parallel execution
+	pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 2
 
-test-subprocess:
-	pytest tests/ -m subprocess -v -n 4
+test-subprocess: ## Run subprocess tests
+	pytest tests/ -m subprocess -v -n 2
 
-test-ci: 
+test-ci: ## Run complete CI pipeline locally
 	@echo "Running tests with parallel execution and coverage..."
-	pytest tests/ --cov=dftracer --cov-report=xml --cov-report=term-missing -v -n 4
+	pytest tests/ --cov=dftracer --cov-report=xml --cov-report=term-missing -v -n 2
 	@echo ""
 	@echo ""
 	@echo "Running linting checks..."
@@ -33,6 +33,9 @@ test-ci:
 
 lint:
 	ruff check .
+
+lint-fix:
+	ruff check . --fix
 
 format:
 	ruff format .
@@ -53,14 +56,15 @@ clean:
 	rm -rf htmlcov/
 	rm -rf .pytest_cache/
 
-build: ## Build package
+build:
 	python -m build
 
 check-all: lint format-check type-check test-parallel
+fix-all: lint-fix format type-check
 
-test-ci-quick:
+test-ci-quick: ## Run quick CI checks without coverage
 	@echo "Running quick tests..."
-	pytest tests/ -v -n 4
+	pytest tests/ -v -n 2
 	@echo ""
 	@echo "Running linting and type checks..."
 	ruff check .

@@ -87,8 +87,7 @@ class NoOpProfiler:
 profiler: ProfilerProtocol
 try:
     import pydftracer as profiler  # type: ignore
-except ImportError as e:
-    print("cannot import", e)
+except ImportError:
     profiler = NoOpProfiler()
     DFTRACER_ENABLE = False
 
@@ -291,7 +290,8 @@ class dft_fn:
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if DFTRACER_ENABLE and self._enable:
-            dftracer.get_instance().exit_event()
+            if not self._flush:
+                self.flush()
 
     def update(
         self,

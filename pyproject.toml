@@ -47,6 +47,7 @@ dev = [
     "h5py",
     "numpy",
     "pillow",
+    "ruff",
 ]
 
 [tool.setuptools.package-dir]
