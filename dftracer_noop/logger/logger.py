@@ -168,11 +168,21 @@ class dft_fn:
 
     def log_static(self, f_py: Optional[F] = None, name: Optional[str] = None):
         def _decorator(func: F) -> F:
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                return func(*args, **kwargs)
+            # Handle the case where @staticmethod is applied after our decorator
+            if isinstance(func, staticmethod):
+                actual_func = func.__func__
 
-            return wrapper  # type: ignore
+                @wraps(actual_func)
+                def static_wrapper(*args, **kwargs):
+                    return actual_func(*args, **kwargs)
+
+                return staticmethod(static_wrapper)  # type: ignore
+            else:
+                @wraps(func)
+                def wrapper(*args, **kwargs):
+                    return func(*args, **kwargs)
+
+                return wrapper  # type: ignore
 
         return _decorator(f_py) if callable(f_py) else _decorator
 

@@ -1,7 +1,7 @@
 import functools
 from collections.abc import Iterator
-from typing import Any, Callable, Optional, TypeVar, overload
 from enum import Enum, auto
+from typing import Any, Callable, Optional, TypeVar, overload
 
 from dftracer_noop.logger.logger import dft_fn, dftracer
 
