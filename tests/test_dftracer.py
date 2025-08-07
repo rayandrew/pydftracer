@@ -236,3 +236,7 @@ if __name__ == "__main__":
             # Clean up temporary script
             if os.path.exists(script_path):
                 os.unlink(script_path)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
