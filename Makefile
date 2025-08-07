@@ -12,14 +12,14 @@ test:
 	pytest tests/ --cov=dftracer --cov-report=term-missing -v
 
 test-parallel: ## Run tests with parallel execution
-	pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 2
+	pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 4
 
 test-subprocess: ## Run subprocess tests
-	pytest tests/ -m subprocess -v -n 2
+	pytest tests/ -m subprocess -v -n 4
 
 test-ci: ## Run complete CI pipeline locally
 	@echo "Running tests with parallel execution and coverage..."
-	pytest tests/ --cov=dftracer --cov-report=xml --cov-report=term-missing -v -n 2
+	pytest tests/ --cov=dftracer --cov-report=xml --cov-report=term-missing -v -n 4
 	@echo ""
 	@echo ""
 	@echo "Running linting checks..."
@@ -64,7 +64,7 @@ fix-all: lint-fix format type-check
 
 test-ci-quick: ## Run quick CI checks without coverage
 	@echo "Running quick tests..."
-	pytest tests/ -v -n 2
+	pytest tests/ -v -n 4
 	@echo ""
 	@echo "Running linting and type checks..."
 	ruff check .
