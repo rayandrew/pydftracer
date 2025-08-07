@@ -475,7 +475,7 @@ class dft_fn:
             else:
                 actual_func = func
 
-            _name = name if name else func.__qualname__
+            _name = name if name else actual_func.__qualname__
 
             @wraps(actual_func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
