@@ -3,16 +3,31 @@ import logging
 import os
 import signal
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Protocol, TypeVar, Union, overload
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    overload,
+)
 
 
 class ProfilerProtocol(Protocol):
     """Protocol defining the interface for profiler implementations."""
 
-    def initialize(self, log_file: str, data_dirs: str, process_id: int) -> None:
+    def initialize(
+        self,
+        log_file: Optional[str] = None,
+        data_dirs: Optional[str] = None,
+        process_id: int = -1,
+    ) -> None:
         """Initialize the profiler with configuration."""
         ...
 
@@ -53,7 +68,12 @@ class ProfilerProtocol(Protocol):
 class NoOpProfiler:
     """Fallback no-operation profiler when pydftracer is not available."""
 
-    def initialize(self, log_file: str, data_dirs: str, process_id: int) -> None:
+    def initialize(
+        self,
+        log_file: Optional[str] = None,
+        data_dirs: Optional[str] = None,
+        process_id: int = -1,
+    ) -> None:
         pass
 
     def get_time(self) -> int:
@@ -146,7 +166,11 @@ class dftracer:
         return dftracer.__instance
 
     @staticmethod
-    def initialize_log(logfile: str, data_dir: str, process_id: int) -> "dftracer":
+    def initialize_log(
+        logfile: Optional[str] = None,
+        data_dir: Optional[str] = None,
+        process_id: int = -1,
+    ) -> "dftracer":
         log_file_path = None
         if logfile:
             log_file_path = Path(logfile)
@@ -511,12 +535,12 @@ class dft_fn:
 
     def iter(
         self,
-        func: Iterable[T],
+        func: Union[Sequence[T], Iterable[T], Generator[T, Any, Any]],
         name: str = "loop",
         iter_name: str = "step",
         include_yield: bool = True,
         include_iter: bool = True,
-    ) -> Iterable[T]:
+    ) -> Generator[T, Any, Any]:
         if DFTRACER_ENABLE and self._enable:
             iter_val = 1
             _name = f"{name}.iter"
@@ -524,6 +548,7 @@ class dft_fn:
             start = dftracer.get_instance().get_time()
             self._arguments = {}
 
+        end = 0
         for v in func:
             if DFTRACER_ENABLE and self._enable:
                 end = dftracer.get_instance().get_time()

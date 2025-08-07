@@ -25,7 +25,7 @@ def run_single_dftracer_test(test_config):
         os.environ[env_var] = value
 
     # Create test directories with unique names per test
-    base_dir = os.path.join(os.path.dirname(__file__), "test_dftracer_subprocess")
+    base_dir = os.path.join(os.path.dirname(__file__), "test_dftracer_output")
     test_name = f"{test_config['name']}_{test_format}_{num_files}_{niter}_{record_size}"
     test_base_dir = os.path.join(base_dir, test_name)
     data_dir = os.path.join(test_base_dir, "data")
@@ -105,7 +105,7 @@ class IOHandler:
             return np.load(filename)
         if self.format == "hdf5":
             fd = h5py.File(filename, "r")
-            _ = fd["x"][:]
+            _ = fd["x"][:]  # type: ignore
             fd.close()
 
     def write(self, filename, a):
@@ -187,7 +187,7 @@ class TestDFTracerLogger:
             },
         ],
     )
-    def test_dftracer_subprocess_execution(self, test_config):
+    def test_dftracer(self, test_config):
         """Run each dftracer test configuration in a separate subprocess"""
 
         # Create a temporary Python script that runs the test

@@ -1,7 +1,7 @@
 import functools
-from collections.abc import Iterator
+from collections.abc import Iterable, Sequence
 from enum import Enum, auto
-from typing import Any, Callable, Optional, TypeVar, Union, overload
+from typing import Any, Callable, Generator, Optional, TypeVar, Union, overload
 
 from dftracer.logger.logger import DFTRACER_ENABLE, dft_fn, dftracer
 
@@ -226,13 +226,13 @@ class _DFTracerAI:
 
     def iter(
         self,
-        iterator: Iterator[T],
+        iterator: Union[Sequence[T], Iterable[T], Generator[T, Any, Any]],
         *,
         include_block: bool = True,
         include_iter: bool = True,
         iter_name: Optional[str] = None,
         block_name: Optional[str] = None,
-    ) -> Iterator[T]:
+    ) -> Generator[T, None, None]:
         iter_name = iter_name or get_iter_handle_name(self.profiler._name)
         block_name = block_name or get_iter_block_name(self.profiler._name)
         iter_val = 1

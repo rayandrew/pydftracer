@@ -57,21 +57,20 @@ def get_dftracer_preload_path():
         return ""
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Args:
     log_dir: str
     data_dir: str
+    num_files: int
+    niter: int
     disable_ai_cat: Optional[str] = None
-    num_files: Optional[int] = None
-    niter: Optional[int] = None
     epoch_as_metadata: bool = False
     record_size: int = 1048576
 
 
-def run_single_ai_logging_test(test_config):
-    """Run a single AI logging test in isolation - suitable for subprocess execution"""
+def run_ai_logging_test(test_config):
     # Create test directories with unique names per test
-    base_dir = os.path.join(os.path.dirname(__file__), "test_ai_logging_subprocess")
+    base_dir = os.path.join(os.path.dirname(__file__), "test_ai_logging_output")
     test_name = f"{test_config['name']}_niter{test_config['niter']}_files{test_config['num_files']}"
     test_base_dir = os.path.join(base_dir, test_name)
     data_dir = os.path.join(test_base_dir, "data")
@@ -223,8 +222,8 @@ def run_single_ai_logging_test(test_config):
         log_dir=log_dir,
         data_dir=data_dir,
         disable_ai_cat=test_config.get("disable_ai_cat"),
-        num_files=test_config["num_files"],
-        niter=test_config["niter"],
+        num_files=int(test_config["num_files"]),
+        niter=int(test_config["niter"]),
         epoch_as_metadata=test_config.get("epoch_as_metadata", False),
         record_size=test_config.get("record_size", 1048576),
     )
@@ -416,7 +415,7 @@ class TestAILogging:
             },
         ],
     )
-    def test_ai_logging_subprocess_execution(self, test_config):
+    def test_ai_logging(self, test_config):
         """Run each AI logging test configuration in a separate subprocess"""
 
         # Create a temporary Python script that runs the test
@@ -425,13 +424,13 @@ import sys
 import os
 sys.path.insert(0, "{os.path.dirname(os.path.dirname(__file__))}")
 
-from tests.test_ai_logging import run_single_ai_logging_test
+from tests.test_ai_logging import run_ai_logging_test
 
 test_config = {test_config!r}
 
 if __name__ == "__main__":
     try:
-        result = run_single_ai_logging_test(test_config)
+        result = run_ai_logging_test(test_config)
         sys.exit(0 if result else 1)
     except Exception as e:
         print(f"Test failed with error: {{e}}")
