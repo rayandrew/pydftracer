@@ -1,9 +1,10 @@
 from collections.abc import Iterable
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, TypeVar, overload
+from typing import Any, Callable, Dict, Optional, TypeVar, Union, overload
 
 # Type variables for preserving function signatures
 F = TypeVar("F", bound=Callable[..., Any])
+T = TypeVar("T")
 
 DFTRACER_ENABLE_ENV = ""
 DFTRACER_INIT_ENV = ""
@@ -17,12 +18,12 @@ DFTRACER_LOG_LEVEL = "ERROR"
 class dftracer:
     __instance = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = None
         self.dbg_logging = None
 
     @staticmethod
-    def get_instance():
+    def get_instance() -> "dftracer":
         if dftracer.__instance is None:
             dftracer.__instance = dftracer()
         return dftracer.__instance
@@ -32,13 +33,13 @@ class dftracer:
         instance = dftracer.get_instance()
         return instance
 
-    def get_time(self):
+    def get_time(self) -> int:
         return 0
 
-    def enter_event(self):
+    def enter_event(self) -> None:
         pass
 
-    def exit_event(self):
+    def exit_event(self) -> None:
         pass
 
     def log_event(
@@ -48,17 +49,14 @@ class dftracer:
         start_time: int,
         duration: int,
         string_args: Optional[Dict[str, Any]] = None,
-    ):
+    ) -> None:
         pass
 
-    def log_metadata_event(self, key: str, value: str):
+    def log_metadata_event(self, key: str, value: str) -> None:
         pass
 
-    def finalize(self):
+    def finalize(self) -> None:
         pass
-
-
-F = TypeVar("F", bound=Callable[..., Any])
 
 
 class dft_fn:
@@ -71,7 +69,7 @@ class dft_fn:
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         enable: bool = True,
-    ):
+    ) -> None:
         self._enable = enable
         if not name:
             name = ""
@@ -88,10 +86,10 @@ class dft_fn:
         if image_size is not None:
             self._arguments["image_size"] = str(image_size)
 
-    def __enter__(self):
+    def __enter__(self) -> "dft_fn":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass
 
     def update(
@@ -101,7 +99,7 @@ class dft_fn:
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         args: Dict[str, Any] = {},
-    ):
+    ) -> None:
         if epoch is not None:
             self._arguments["epoch"] = str(epoch)
         if step is not None:
@@ -113,10 +111,10 @@ class dft_fn:
         for key, value in args.items():
             self._arguments[key] = str(value)
 
-    def flush(self):
+    def flush(self) -> None:
         pass
 
-    def reset(self):
+    def reset(self) -> None:
         self._arguments = {}
 
     @overload
@@ -127,12 +125,14 @@ class dft_fn:
         self, f_py: None = None, *, name: Optional[str] = None
     ) -> Callable[[F], F]: ...
 
-    def log(self, f_py: Optional[F] = None, name: Optional[str] = None):
+    def log(
+        self, f_py: Optional[F] = None, name: Optional[str] = None
+    ) -> Union[F, Callable[[F], F]]:
         def _decorator(func: F) -> F:
             self._arguments = {}
 
             @wraps(func)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 x = func(*args, **kwargs)
                 return x
 
@@ -148,10 +148,12 @@ class dft_fn:
         self, f_py: None = None, *, name: Optional[str] = None
     ) -> Callable[[F], F]: ...
 
-    def log_init(self, f_py: Optional[F] = None, name: Optional[str] = None):
+    def log_init(
+        self, f_py: Optional[F] = None, name: Optional[str] = None
+    ) -> Union[F, Callable[[F], F]]:
         def _decorator(init: F) -> F:
             @wraps(init)
-            def new_init(*args, **kwargs):
+            def new_init(*args: Any, **kwargs: Any) -> Any:
                 init(*args, **kwargs)
 
             return new_init  # type: ignore
@@ -166,26 +168,28 @@ class dft_fn:
         self, f_py: None = None, *, name: Optional[str] = None
     ) -> Callable[[F], F]: ...
 
-    def log_static(self, f_py: Optional[F] = None, name: Optional[str] = None):
+    def log_static(
+        self, f_py: Optional[F] = None, name: Optional[str] = None
+    ) -> Union[F, Callable[[F], F]]:
         def _decorator(func: F) -> F:
             @wraps(func)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 return func(*args, **kwargs)
 
             return staticmethod(wrapper)  # type: ignore
 
         return _decorator(f_py) if callable(f_py) else _decorator
 
-    def log_metadata(self, key: str, value: str):
+    def log_metadata(self, key: str, value: str) -> None:
         pass
 
     def iter(
         self,
-        func: Iterable,
+        func: Iterable[T],
         name: str = "loop",
         iter_name: str = "step",
         include_yield: bool = True,
         include_iter: bool = True,
-    ):
+    ) -> Iterable[T]:
         for v in func:
             yield v

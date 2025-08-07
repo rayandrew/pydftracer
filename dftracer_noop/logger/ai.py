@@ -1,7 +1,7 @@
 import functools
 from collections.abc import Iterator
 from enum import Enum, auto
-from typing import Any, Callable, Optional, TypeVar, overload
+from typing import Any, Callable, Optional, TypeVar, Union, overload
 
 from dftracer_noop.logger.logger import dft_fn, dftracer
 
@@ -9,7 +9,7 @@ from dftracer_noop.logger.logger import dft_fn, dftracer
 # MIT License: https://github.com/irgeek/StrEnum/blob/master/strenum/__init__.py
 # Support all python
 class LowercaseStringEnum(str, Enum):
-    def __new__(cls, value, *args, **kwargs):
+    def __new__(cls, value: Any, *args: Any, **kwargs: Any) -> "LowercaseStringEnum":
         # this is a specific version that will lowercase the values
         if not isinstance(value, (str, auto)):
             raise TypeError(  # pragma: no cover
@@ -17,10 +17,13 @@ class LowercaseStringEnum(str, Enum):
             )
         return super().__new__(cls, value, *args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
 
-    def _generate_next_value_(name, *_):
+    @staticmethod
+    def _generate_next_value_(
+        name: str, start: int, count: int, last_values: list[Any]
+    ) -> str:
         return name.lower()
 
 
@@ -38,7 +41,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 T = TypeVar("T")
 
 
-def get_iter_block_name(name: str):
+def get_iter_block_name(name: str) -> str:
     return (
         f"{name}{CTX_SEPARATOR}{BLOCK_NAME}"
         if not name.endswith(f"{CTX_SEPARATOR}{BLOCK_NAME}")
@@ -46,7 +49,7 @@ def get_iter_block_name(name: str):
     )
 
 
-def get_iter_handle_name(name: str):
+def get_iter_handle_name(name: str) -> str:
     return (
         f"{name}{CTX_SEPARATOR}{ITER_NAME}"
         if not name.endswith(f"{CTX_SEPARATOR}{ITER_NAME}")
@@ -64,7 +67,7 @@ class _DFTracerAI:
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         enable: bool = True,
-    ):
+    ) -> None:
         if not name:
             name = cat
 
@@ -111,9 +114,9 @@ class _DFTracerAI:
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
-        image_size=None,
-        args=None,
-    ):
+        image_size: Optional[Any] = None,
+        args: Optional[dict[str, Any]] = None,
+    ) -> Union[F, "DFTracerAI"]:
         if epoch is not None:
             self.profiler._arguments["epoch"] = str(epoch)
         if step is not None:
@@ -132,7 +135,7 @@ class _DFTracerAI:
 
             def _decorator(f: F) -> F:
                 @functools.wraps(f)
-                def wrapper(*args, **kwargs):
+                def wrapper(*args: Any, **kwargs: Any) -> Any:
                     if is_enabled:
                         with self:
                             return f(*args, **kwargs)
@@ -152,7 +155,7 @@ class _DFTracerAI:
                 enable=is_enabled,
             )
 
-    def __enter__(self):
+    def __enter__(self) -> "_DFTracerAI":
         self.profiler.__enter__()
         # Reset flush state to ensure proper event logging on each context manager entry.
         # The underlying DFTracer logger was designed for one-time use objects, but this
@@ -161,11 +164,10 @@ class _DFTracerAI:
         self.profiler._flush = False
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.profiler.__exit__(exc_type, exc_val, exc_tb)
-        return False
 
-    def start(self, metadata: bool = False):
+    def start(self, metadata: bool = False) -> None:
         if metadata:
             time = dftracer.get_instance().get_time()
             self.profiler.log_metadata(
@@ -175,7 +177,7 @@ class _DFTracerAI:
         else:
             self.__enter__()
 
-    def stop(self, metadata: bool = False):
+    def stop(self, metadata: bool = False) -> None:
         if metadata:
             time = dftracer.get_instance().get_time()
             self.profiler.log_metadata(
@@ -185,18 +187,18 @@ class _DFTracerAI:
         else:
             self.__exit__(None, None, None)
 
-    def enable(self):
+    def enable(self) -> None:
         self.profiler._enable = True
 
-    def disable(self):
+    def disable(self) -> None:
         self.profiler._enable = False
 
     @property
-    def cat(self):
+    def cat(self) -> str:
         return self.profiler._cat
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.profiler._name
 
     def update(
@@ -206,7 +208,7 @@ class _DFTracerAI:
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         args: Optional[dict[str, Any]] = None,
-    ):
+    ) -> "_DFTracerAI":
         # DFTRACER_ENABLE is always False in no-op implementation
         # All update operations are no-ops
         return self
@@ -249,7 +251,7 @@ class DFTracerAI(_DFTracerAI):
         )
         self._children: dict[str, DFTracerAI] = {}
 
-    def create_children(self, names: dict[str, str]):
+    def create_children(self, names: dict[str, str]) -> None:
         for attr, name in names.items():
             tracer = DFTracerAI(
                 cat=self.profiler._cat,
@@ -270,7 +272,7 @@ class DFTracerAI(_DFTracerAI):
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         args: Optional[dict[str, Any]] = None,
-    ):
+    ) -> "DFTracerAI":
         super().update(
             epoch=epoch,
             step=step,
@@ -288,12 +290,12 @@ class DFTracerAI(_DFTracerAI):
             )
         return self
 
-    def enable(self):
+    def enable(self) -> None:
         super().enable()
         for tracer in self._children.values():
             tracer.enable()
 
-    def disable(self):
+    def disable(self) -> None:
         super().disable()
         for tracer in self._children.values():
             tracer.disable()
@@ -324,8 +326,8 @@ class DFTracerAI(_DFTracerAI):
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
-        image_size=None,
-        args=None,
+        image_size: Optional[Any] = None,
+        args: Optional[dict[str, Any]] = None,
     ) -> F: ...
 
     @overload
@@ -337,8 +339,8 @@ class DFTracerAI(_DFTracerAI):
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
-        image_size=None,
-        args=None,
+        image_size: Optional[Any] = None,
+        args: Optional[dict[str, Any]] = None,
     ) -> "DFTracerAI": ...
 
     def init(
@@ -349,9 +351,9 @@ class DFTracerAI(_DFTracerAI):
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
-        image_size=None,
-        args=None,
-    ):
+        image_size: Optional[Any] = None,
+        args: Optional[dict[str, Any]] = None,
+    ) -> Union[F, "DFTracerAI"]:
         _name = f"{self.profiler._name}{CTX_SEPARATOR}{INIT_NAME}"
         if _name in self._children:
             if fn is not None:
@@ -476,7 +478,7 @@ class _Compute(DFTracerAI):
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         enable: bool = True,
-    ):
+    ) -> None:
         super().__init__(
             cat=ProfileCategory.COMPUTE,
             name=ProfileCategory.COMPUTE,
