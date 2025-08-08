@@ -19,7 +19,7 @@ import pytest
 from tests.utils import get_dftracer_preload_path
 
 
-@dataclass(kw_only=True)
+@dataclass
 class Args:
     log_dir: str
     data_dir: str
