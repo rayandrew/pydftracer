@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dftracer"
 version = "0.1.0"
-description = "Python No-Op binding for DFTracer"
+description = "Python libs for DFTracer"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

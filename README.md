@@ -1,23 +1,6 @@
 # pydftracer
 
-[![License: MIT](#### Running Tests
-
-```bash
-# Install development dependencies
-pip install -e .[dev]
-
-# Using Make (recommended)
-make test-parallel        # Run all tests with parallel execution
-make test-subprocess      # Run only subprocess-based dftracer tests  
-make test-ci             # Run comprehensive tests matching CI configuration
-make test-ci-quick       # Run quick tests and checks (faster)
-make check-all           # Run all quality checks (lint, format, type-check, test)
-
-# Using pytest directly
-pytest tests/ -v -n 2                                    # All tests with parallel execution
-pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 2  # Tests with coverage
-pytest tests/ -m subprocess -v -n 2                      # Only subprocess tests
-```io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 A no operation (**No-Op**) Python binding for [DFTracer](https://github.com/hariharan-devarajan/dftracer) that provides seamless API compatibility without requiring the full DFTracer installation. Perfect for testing, development, and environments where you want to use DFTracer's API without the overhead of actual tracing.
@@ -31,6 +14,26 @@ A no operation (**No-Op**) Python binding for [DFTracer](https://github.com/hari
 
 ```bash
 pip install dftracer
+ # with libdftracer and dftracer_utils
+pip install dftracer[full]
+```
+
+## Development
+
+```bash
+# Install development dependencies
+pip install -e .[dev]
+
+# Using Make (recommended)
+make test-parallel       # Run all tests with parallel execution
+make test-subprocess     # Run only subprocess-based dftracer tests  
+make test-ci             # Run comprehensive tests matching CI configuration
+make test-ci-quick       # Run quick tests and checks (faster)
+make check-all           # Run all quality checks (lint, format, type-check, test)
+
+# Using pytest directly
+pytest tests/ -v -n 4    # All tests with parallel execution
+pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 4  # Tests with coverage
 ```
 
 ## Documentation
