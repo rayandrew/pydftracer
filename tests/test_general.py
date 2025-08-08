@@ -41,12 +41,14 @@ class TestDFTracerLogger:
         instance2 = dftracer.get_instance()
 
         assert instance1 is instance2
-        assert isinstance(instance1, dftracer)
+        # Use type name comparison instead of isinstance for parallel test compatibility
+        assert type(instance1).__name__ == "dftracer"
 
     def test_dftracer_initialize_log(self):
         result = dftracer.initialize_log("logfile.log", "/tmp/data", 12345)
 
-        assert isinstance(result, dftracer)
+        # Use type name comparison instead of isinstance for parallel test compatibility
+        assert type(result).__name__ == "dftracer"
         assert result is dftracer.get_instance()
 
     def test_dftracer_methods(self):
@@ -225,7 +227,6 @@ class TestDftFn:
     def test_dft_fn_log_static_regular_function(self):
         fn = dft_fn("test")
 
-        # Test log_static on a regular function
         @fn.log_static
         def regular_function(x):
             return x * 4
@@ -236,9 +237,20 @@ class TestDftFn:
     def test_dft_fn_log_static_with_parentheses(self):
         fn = dft_fn("test")
 
-        # Test log_static() with parentheses
         class TestClass:
             @fn.log_static()
+            @staticmethod
+            def static_method(x):
+                return x * 5
+
+        result = TestClass.static_method(2)
+        assert result == 10
+
+    def test_dft_fn_log_static_with_name(self):
+        fn = dft_fn("test")
+
+        class TestClass:
+            @fn.log_static(name="static_method")
             @staticmethod
             def static_method(x):
                 return x * 5

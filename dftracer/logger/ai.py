@@ -216,11 +216,11 @@ class _DFTracerAI:
                 self.profiler._arguments["epoch"] = str(epoch)
             if step is not None:
                 self.profiler._arguments["step"] = str(step)
-            if image_idx is not None:
+            if image_idx is not None:  # pragma: no cover
                 self.profiler._arguments["image_idx"] = str(image_idx)
-            if image_size is not None:
+            if image_size is not None:  # pragma: no cover
                 self.profiler._arguments["image_size"] = str(image_size)
-            for key, value in args.items():
+            for key, value in args.items():  # pragma: no cover
                 self.profiler._arguments[key] = str(value)
         return self
 

@@ -123,12 +123,6 @@ class IOHandler:
 
 
 class TestDFTracerLogger:
-    def test_dftracer_singleton(self):
-        instance1 = dftracer.get_instance()
-        instance2 = dftracer.get_instance()
-        assert instance1 is instance2
-        assert isinstance(instance1, dftracer)
-
     @pytest.mark.subprocess
     @pytest.mark.parametrize(
         "test_config",

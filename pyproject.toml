@@ -49,10 +49,10 @@ dev = [
     "pillow",
     "ruff",
     "mypy",
-    'torch>=2.5.1'
+    "torch>=2.5.1"
 ]
 dynamo = [
-    'torch>=2.5.1'
+    "torch>=2.5.1"
 ]
 
 [tool.setuptools.package-dir]

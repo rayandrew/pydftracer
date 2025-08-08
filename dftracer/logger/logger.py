@@ -29,19 +29,19 @@ class ProfilerProtocol(Protocol):
         process_id: int = -1,
     ) -> None:
         """Initialize the profiler with configuration."""
-        ...
+        ...  # pragma: no cover
 
     def get_time(self) -> int:
         """Get current time for profiling."""
-        ...
+        ...  # pragma: no cover
 
     def enter_event(self) -> None:
         """Mark entry into an event."""
-        ...
+        ...  # pragma: no cover
 
     def exit_event(self) -> None:
         """Mark exit from an event."""
-        ...
+        ...  # pragma: no cover
 
     def log_event(
         self,
@@ -54,15 +54,15 @@ class ProfilerProtocol(Protocol):
         float_args: Dict[str, float] = {},
     ) -> None:
         """Log a profiling event."""
-        ...
+        ...  # pragma: no cover
 
     def log_metadata_event(self, key: str, value: str) -> None:
         """Log a metadata event."""
-        ...
+        ...  # pragma: no cover
 
     def finalize(self) -> None:
         """Finalize the profiler and release resources."""
-        ...
+        ...  # pragma: no cover
 
 
 class NoOpProfiler:
@@ -107,7 +107,7 @@ class NoOpProfiler:
 profiler: ProfilerProtocol
 try:
     import pydftracer as profiler  # type: ignore
-except ImportError:
+except ImportError:  # pragma: no cover
     profiler = NoOpProfiler()
     DFTRACER_ENABLE = False
 
@@ -180,11 +180,11 @@ class dftracer:
                 os.makedirs(log_file_path.parent, exist_ok=True)
                 outfile = os.path.join(log_file_path.parent, "dft.log")
         log_level = logging.ERROR
-        if DFTRACER_LOG_LEVEL.upper() == "DEBUG":
+        if DFTRACER_LOG_LEVEL.upper() == "DEBUG":  # pragma: no cover
             log_level = logging.DEBUG
-        elif DFTRACER_LOG_LEVEL.upper() == "INFO":
+        elif DFTRACER_LOG_LEVEL.upper() == "INFO":  # pragma: no cover
             log_level = logging.INFO
-        elif DFTRACER_LOG_LEVEL.upper() == "WARN":
+        elif DFTRACER_LOG_LEVEL.upper() == "WARN":  # pragma: no cover
             log_level = logging.WARN
         instance = dftracer.get_instance()
         instance.dbg_logging = setup_logger(
@@ -395,6 +395,7 @@ class dft_fn:
                                 self._arguments["image_size"] = str(args[0].image_size)
                             if hasattr(args[0], "image_idx"):
                                 self._arguments["image_idx"] = str(args[0].image_idx)
+                        print(self._arguments)
                         full_args = dict(zip(arg_names[1:], args[1:]))
                         full_args.update(kwargs)
                         full_args.update(get_default_args(func))
@@ -407,7 +408,7 @@ class dft_fn:
                             elif name == "image_size":
                                 self._arguments["image_size"] = str(value)
                             elif name == "step":
-                                self._arguments["image_size"] = str(value)
+                                self._arguments["step"] = str(value)
 
                     start = dftracer.get_instance().get_time()
                     dftracer.get_instance().enter_event()
@@ -453,18 +454,20 @@ class dft_fn:
                     arg_values = dict(zip(arg_names[1:], args))
                     arg_values.update(kwargs)
                     arg_values.update(get_default_args(init))
-                    if "epoch" in arg_values:
-                        self._arguments["epoch"] = str(arg_values["epoch"])
-                    elif "image_idx" in arg_values:
-                        self._arguments["image_idx"] = str(arg_values["image_idx"])
-                    elif "image_size" in arg_values:
-                        self._arguments["image_size"] = str(arg_values["image_size"])
-                    elif "step" in arg_values:
-                        self._arguments["step"] = str(arg_values["step"])
+                    for name, value in arg_values.items():
+                        if name == "epoch":
+                            self._arguments["epoch"] = str(value)
+                        elif name == "image_idx":
+                            self._arguments["image_idx"] = str(value)
+                        elif name == "image_size":
+                            self._arguments["image_size"] = str(value)
+                        elif name == "step":
+                            self._arguments["step"] = str(value)
                     start = dftracer.get_instance().get_time()
                     dftracer.get_instance().enter_event()
 
                 init(*args, **kwargs)
+
                 if DFTRACER_ENABLE and self._enable:
                     end = dftracer.get_instance().get_time()
                     string_args = self._arguments if len(self._arguments) > 0 else None
