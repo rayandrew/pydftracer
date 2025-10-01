@@ -395,7 +395,6 @@ class dft_fn:
                                 self._arguments["image_size"] = str(args[0].image_size)
                             if hasattr(args[0], "image_idx"):
                                 self._arguments["image_idx"] = str(args[0].image_idx)
-                        print(self._arguments)
                         full_args = dict(zip(arg_names[1:], args[1:]))
                         full_args.update(kwargs)
                         full_args.update(get_default_args(func))
