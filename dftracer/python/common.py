@@ -81,6 +81,7 @@ class dftracer:
 
     @staticmethod
     def initialize_log(logfile, data_dir, process_id):
+        instance = dftracer.get_instance()
         global profiler
         if profiler:
             log_file_path = None
@@ -98,7 +99,6 @@ class dftracer:
                 log_level = logging.INFO
             elif DFTRACER_LOG_LEVEL == "WARN":
                 log_level = logging.WARN
-            instance = dftracer.get_instance()
             instance.dbg_logging = setup_logger(name="dftracer_dbg", log_file=outfile, formatter='[DFTRACER_PY %(levelname)s] %(message)s [%(pathname)s:%(lineno)d]', level=log_level)
             instance.dbg_logging.debug(f"logger.initialize_log {logfile} {data_dir} {process_id}")
             if DFTRACER_ENABLE:
