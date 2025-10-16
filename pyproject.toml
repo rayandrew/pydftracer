@@ -121,4 +121,5 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [tool.setuptools_scm]
+local_scheme = "no-local-version"
 version_file = "dftracer/python/_version.py"
