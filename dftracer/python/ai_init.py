@@ -1,4 +1,4 @@
-from dftracer.logger.ai_common import *
+from dftracer.python.ai_common import *
 
 ai = AI()
 comm = ai.comm

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import os
-from dftracer.logger import dftracer
+from dftracer.python.logger import dftracer
 import torch
 
 

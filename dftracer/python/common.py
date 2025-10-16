@@ -1,5 +1,5 @@
 
-from dftracer.logger.env import *
+from dftracer.python.env import *
 
 profiler = None
 

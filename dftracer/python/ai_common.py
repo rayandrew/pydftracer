@@ -2,8 +2,8 @@ import functools
 import sys
 from typing import Any, Callable, Iterator, Optional, TypeVar, cast, overload
 
-from dftracer.logger.env import *
-from dftracer.logger.common import *
+from dftracer.python.env import *
+from dftracer.python.common import *
 
 dft_fn = None
 dftracer = None
