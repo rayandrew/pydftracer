@@ -1,0 +1,5 @@
+exclude .git_archival.txt
+exclude .gitattributes
+exclude Makefile
+prune tests
+prune .github

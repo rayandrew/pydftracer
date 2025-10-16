@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=80", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pydftracer"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python libs for DFTracer"
 readme = "README.md"
 license = {text = "MIT"}
@@ -36,11 +36,11 @@ Repository = "https://github.com/LLNL/pydftracer"
 Documentation = "https://dftracer.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
-full = [
-    "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
+all = [
+    "dftracer @ git+https://github.com/LLNL/dftracer.git@integration/utils-and-python",
 ]
 dev = [
-    "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
+    "dftracer @ git+https://github.com/LLNL/dftracer.git@integration/utils-and-python",
     "pytest>=6.0",
     "pytest-cov",
     "pytest-xdist",
@@ -119,3 +119,6 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+
+[tool.setuptools_scm]
+version_file = "dftracer/python/_version.py"
