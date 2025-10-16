@@ -81,29 +81,30 @@ class dftracer:
 
     @staticmethod
     def initialize_log(logfile, data_dir, process_id):
-        global profiler
-        log_file_path = None
-        if logfile:
-            log_file_path = Path(logfile)
-        outfile = "dft.log"
-        if DFTRACER_ENABLE:
-            if log_file_path:
-                os.makedirs(log_file_path.parent, exist_ok=True)
-                outfile = os.path.join(log_file_path.parent, "dft.log")
-        log_level = logging.ERROR
-        if DFTRACER_LOG_LEVEL == "DEBUG":
-            log_level = logging.DEBUG
-        elif DFTRACER_LOG_LEVEL == "INFO":
-            log_level = logging.INFO
-        elif DFTRACER_LOG_LEVEL == "WARN":
-            log_level = logging.WARN
         instance = dftracer.get_instance()
-        instance.dbg_logging = setup_logger(name="dftracer_dbg", log_file=outfile, formatter='[DFTRACER_PY %(levelname)s] %(message)s [%(pathname)s:%(lineno)d]', level=log_level)
-        instance.dbg_logging.debug(f"logger.initialize_log {logfile} {data_dir} {process_id}")
-        if DFTRACER_ENABLE:
-            instance.logger = profiler
-            instance.dbg_logging.debug(f"logger.initialize {logfile} {data_dir} {process_id}")
-            instance.logger.initialize(log_file=logfile, data_dirs=data_dir, process_id=process_id)
+        global profiler
+        if profiler:
+            log_file_path = None
+            if logfile:
+                log_file_path = Path(logfile)
+            outfile = "dft.log"
+            if DFTRACER_ENABLE:
+                if log_file_path:
+                    os.makedirs(log_file_path.parent, exist_ok=True)
+                    outfile = os.path.join(log_file_path.parent, "dft.log")
+            log_level = logging.ERROR
+            if DFTRACER_LOG_LEVEL == "DEBUG":
+                log_level = logging.DEBUG
+            elif DFTRACER_LOG_LEVEL == "INFO":
+                log_level = logging.INFO
+            elif DFTRACER_LOG_LEVEL == "WARN":
+                log_level = logging.WARN
+            instance.dbg_logging = setup_logger(name="dftracer_dbg", log_file=outfile, formatter='[DFTRACER_PY %(levelname)s] %(message)s [%(pathname)s:%(lineno)d]', level=log_level)
+            instance.dbg_logging.debug(f"logger.initialize_log {logfile} {data_dir} {process_id}")
+            if DFTRACER_ENABLE:
+                instance.logger = profiler
+                instance.dbg_logging.debug(f"logger.initialize {logfile} {data_dir} {process_id}")
+                instance.logger.initialize(log_file=logfile, data_dirs=data_dir, process_id=process_id)
         return instance
 
     def get_time(self):
