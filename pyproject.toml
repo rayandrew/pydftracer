@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dftracer"
+name = "pydftracer"
 version = "0.1.0"
 description = "Python libs for DFTracer"
 readme = "README.md"

@@ -1,10 +1,9 @@
-import os
 from dataclasses import dataclass
 from typing import List, Optional
-
+import os
+from dftracer.logger import dftracer
 import torch
 
-from dftracer.logger import dftracer
 
 DFTRACER_ENABLE_ENV = "DFTRACER_ENABLE"
 DFTRACER_ENABLE = True if os.getenv(DFTRACER_ENABLE_ENV, "0") == "1" else False
@@ -16,8 +15,8 @@ if DFTRACER_ENABLE:
 
         # Alpha feature from: https://docs.pytorch.org/docs/stable/torch.compiler_custom_backends.html#custom-backends-after-aotautograd
         from torch._dynamo.backends.common import aot_autograd
-    except ImportError as err:  # pragma: no cover
-        raise RuntimeError("DFTracer requires PyTorch to be installed") from err
+    except ImportError:
+        raise RuntimeError("DFTracer requires PyTorch to be installed")
 
 
 # Data structure for trace records
@@ -38,7 +37,7 @@ class dft_fn:
     def __init__(self, name: str = "dynamo", enabled: bool = True):
         self._enabled = enabled
         if DFTRACER_ENABLE and self._enabled:
-            if self.__instance is not None:  # pragma: no cover
+            if self.__instance is not None:
                 # We can only have one instance, since it relies on the call_stack to trace, reuse same dft_fn for multiple models
                 raise RuntimeError("dft_fn instance already exists")
             self.traces: List[TraceRecord] = []
@@ -87,6 +86,7 @@ class dft_fn:
             return f_py
 
         def _decorator(func):
+
             def enhanced_trace_wrapper(gm: torch.fx.GraphModule, example, **kwargs):
                 """Enhanced custom trace function for Dynamo"""
                 # if not (DFTRACER_ENABLE and self._enabled):
