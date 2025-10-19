@@ -8,6 +8,7 @@ dataloader = ai.dataloader
 device = ai.device
 checkpoint = ai.checkpoint
 pipeline = ai.pipeline
+checkpoint = ai.checkpoint
 
 __all__ = [
     "INIT_NAME",
@@ -20,6 +21,7 @@ __all__ = [
     "PipelineEvent",
     "ProfileCategory",
     "ai",
+    "checkpoint",
     "comm",
     "compute",
     "data",

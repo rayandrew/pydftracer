@@ -11,9 +11,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from dftracer.logger import dft_fn, dftracer
-from dftracer.logger.ai import compute
+from dftracer.python import compute, dft_fn, dftracer
 
 
 def run_ai_update_method_parameter_paths_test():
@@ -25,67 +23,73 @@ def run_ai_update_method_parameter_paths_test():
 
         # Test case 1: Test with epoch parameter
         compute.update(epoch=5)
-        assert compute.profiler._arguments["epoch"] == "5"
+        assert "epoch" in compute.profiler._arguments_int
+        assert (
+            compute.profiler._arguments_int["epoch"][1] == 5
+        )  # TagValueTuple: (tag_type, value)
 
         # Test case 2: Test with step parameter
         compute.update(step=100)
-        assert compute.profiler._arguments["epoch"] == "5"
-        assert compute.profiler._arguments["step"] == "100"
+        assert "epoch" in compute.profiler._arguments_int
+        assert compute.profiler._arguments_int["epoch"][1] == 5
+        assert "step" in compute.profiler._arguments_int
+        assert compute.profiler._arguments_int["step"][1] == 100
 
         # Test case 3: Test with image_idx parameter
         compute.update(image_idx=42)
-        assert compute.profiler._arguments["epoch"] == "5"
-        assert compute.profiler._arguments["step"] == "100"
-        assert compute.profiler._arguments["image_idx"] == "42"
+        assert compute.profiler._arguments_int["epoch"][1] == 5
+        assert compute.profiler._arguments_int["step"][1] == 100
+        assert compute.profiler._arguments_int["image_idx"][1] == 42
 
         # Test case 4: Test with image_size parameter
-        compute.update(image_size=(224, 224))
-        assert compute.profiler._arguments["epoch"] == "5"
-        assert compute.profiler._arguments["step"] == "100"
-        assert compute.profiler._arguments["image_idx"] == "42"
-        assert compute.profiler._arguments["image_size"] == "(224, 224)"
+        compute.update(image_size=224)
+        assert compute.profiler._arguments_int["epoch"][1] == 5
+        assert compute.profiler._arguments_int["step"][1] == 100
+        assert compute.profiler._arguments_int["image_idx"][1] == 42
+        assert compute.profiler._arguments_float["image_size"][1] == 224.0
 
         # Test case 5: Test with custom args
         custom_args = {"learning_rate": 0.001, "batch_size": 16}
         compute.update(args=custom_args)
-        assert compute.profiler._arguments["epoch"] == "5"
-        assert compute.profiler._arguments["step"] == "100"
-        assert compute.profiler._arguments["image_idx"] == "42"
-        assert compute.profiler._arguments["image_size"] == "(224, 224)"
-        assert compute.profiler._arguments["learning_rate"] == "0.001"
-        assert compute.profiler._arguments["batch_size"] == "16"
+        assert compute.profiler._arguments_int["epoch"][1] == 5
+        assert compute.profiler._arguments_int["step"][1] == 100
+        assert compute.profiler._arguments_int["image_idx"][1] == 42
+        assert compute.profiler._arguments_float["image_size"][1] == 224.0
+        assert compute.profiler._arguments_float["learning_rate"][1] == 0.001
+        assert compute.profiler._arguments_int["batch_size"][1] == 16
 
         # Test case 6: Test with all parameters together
         compute.update(
             epoch=10,
             step=200,
             image_idx=25,
-            image_size=(512, 512),
-            args={"optimizer": "adam", "loss": "cross_entropy"},
+            image_size=512,
+            args={"optimizer": "adam", "loss": 0.5},
         )
-        assert compute.profiler._arguments["epoch"] == "10"
-        assert compute.profiler._arguments["step"] == "200"
-        assert compute.profiler._arguments["image_idx"] == "25"
-        assert compute.profiler._arguments["image_size"] == "(512, 512)"
-        assert compute.profiler._arguments["optimizer"] == "adam"
-        assert compute.profiler._arguments["loss"] == "cross_entropy"
+        assert compute.profiler._arguments_int["epoch"][1] == 10
+        assert compute.profiler._arguments_int["step"][1] == 200
+        assert compute.profiler._arguments_int["image_idx"][1] == 25
+        assert compute.profiler._arguments_float["image_size"][1] == 512.0
+        assert compute.profiler._arguments_string["optimizer"][1] == "adam"
+        assert compute.profiler._arguments_float["loss"][1] == 0.5
 
         # Test case 7: Test with None values (should not add to arguments)
         compute.update(epoch=None, step=None, image_idx=None, image_size=None, args={})
-        assert compute.profiler._arguments["epoch"] == "10"
-        assert compute.profiler._arguments["step"] == "200"
-        assert compute.profiler._arguments["image_idx"] == "25"
-        assert compute.profiler._arguments["image_size"] == "(512, 512)"
-        assert compute.profiler._arguments["optimizer"] == "adam"
-        assert compute.profiler._arguments["loss"] == "cross_entropy"
+        # Values should remain from test case 6
+        assert compute.profiler._arguments_int["epoch"][1] == 10
+        assert compute.profiler._arguments_int["step"][1] == 200
+        assert compute.profiler._arguments_int["image_idx"][1] == 25
+        assert compute.profiler._arguments_float["image_size"][1] == 512.0
+        assert compute.profiler._arguments_string["optimizer"][1] == "adam"
+        assert compute.profiler._arguments_float["loss"][1] == 0.5
 
         # Test case 8: Specifically target the missing lines with individual calls
         compute.update(step=999)
         compute.update(image_idx=123)
-        compute.update(image_size=(128, 128))
-        assert compute.profiler._arguments["step"] == "999"
-        assert compute.profiler._arguments["image_idx"] == "123"
-        assert compute.profiler._arguments["image_size"] == "(128, 128)"
+        compute.update(image_size=128 * 128)
+        assert compute.profiler._arguments_int["step"][1] == 999
+        assert compute.profiler._arguments_int["image_idx"][1] == 123
+        assert compute.profiler._arguments_float["image_size"][1] == 16384.0
 
         df_logger.finalize()
 
@@ -100,7 +104,7 @@ def run_dft_fn_log_decorator_attribute_access_test():
             def __init__(self):
                 self.epoch = 5
                 self.step = 100
-                self.image_size = (224, 224)
+                self.image_size = 224
                 self.image_idx = 42
 
             def process_method(self, x):
@@ -137,11 +141,11 @@ def run_dft_fn_log_init_with_constructor_args_test():
 
         obj1 = TestClass(epoch=10)
         obj2 = TestClass(image_idx=5)
-        obj3 = TestClass(image_size=(64, 64))
+        obj3 = TestClass(image_size=64)
         obj4 = TestClass(step=25)
 
         # Test with multiple arguments
-        obj5 = TestClass(epoch=1, step=2, image_idx=3, image_size=(32, 32))
+        obj5 = TestClass(epoch=1, step=2, image_idx=3, image_size=32)
 
         assert obj1 is not None
         assert obj2 is not None
@@ -155,12 +159,11 @@ def run_dft_fn_log_init_with_constructor_args_test():
 
 def run_iter_method_coverage_test():
     """Test the iter method in logger.py for coverage."""
-    from dftracer.logger import logger
+    import dftracer.python.logger  # noqa: F401
 
-    importlib.reload(logger)
+    importlib.reload(sys.modules["dftracer.python.logger"])
 
-    from dftracer.logger import dftracer
-    from dftracer.logger.logger import dft_fn
+    from dftracer.python import dft_fn, dftracer
 
     with tempfile.TemporaryDirectory() as temp_dir:
         log_file = os.path.join(temp_dir, "test_iter.pfw")
@@ -194,10 +197,10 @@ def run_log_from_function_params_test():
             return 0
 
         assert fun(epoch=1, step=2, image_size=3, image_idx=4) == 0
-        assert profiler._arguments["epoch"] == "1"
-        assert profiler._arguments["step"] == "2"
-        assert profiler._arguments["image_size"] == "3"
-        assert profiler._arguments["image_idx"] == "4"
+        assert profiler._arguments_int["epoch"][1] == 1
+        assert profiler._arguments_int["step"][1] == 2
+        assert profiler._arguments_float["image_size"][1] == 3.0
+        assert profiler._arguments_int["image_idx"][1] == 4
 
         df_logger.finalize()
 
@@ -221,10 +224,10 @@ def run_log_from_method_params_test():
 
         f = F(epoch=1, step=2, image_size=3, image_idx=4)
         assert f.fun() == 0
-        assert profiler._arguments["epoch"] == "1"
-        assert profiler._arguments["step"] == "2"
-        assert profiler._arguments["image_size"] == "3"
-        assert profiler._arguments["image_idx"] == "4"
+        assert profiler._arguments_int["epoch"][1] == 1
+        assert profiler._arguments_int["step"][1] == 2
+        assert profiler._arguments_float["image_size"][1] == 3.0
+        assert profiler._arguments_int["image_idx"][1] == 4
 
         df_logger.finalize()
 
@@ -241,10 +244,10 @@ def run_log_init_from_constructor_params_test():
                 pass
 
         F(epoch=1, step=2, image_size=3, image_idx=4)
-        assert profiler._arguments["epoch"] == "1"
-        assert profiler._arguments["step"] == "2"
-        assert profiler._arguments["image_size"] == "3"
-        assert profiler._arguments["image_idx"] == "4"
+        assert profiler._arguments_int["epoch"][1] == 1
+        assert profiler._arguments_int["step"][1] == 2
+        assert profiler._arguments_float["image_size"][1] == 3.0
+        assert profiler._arguments_int["image_idx"][1] == 4
 
         df_logger.finalize()
 
@@ -334,12 +337,12 @@ if __name__ == "__main__":
         """Test NoOpProfiler to cover fallback cases."""
         # This test doesn't need subprocess since it doesn't use dftracer.initialize_log
         # Mock import error to trigger NoOpProfiler usage
-        with patch("dftracer.logger.logger.profiler", side_effect=ImportError()):
-            from dftracer.logger import logger
+        with patch("dftracer.python.common.profiler", side_effect=ImportError()):
+            import dftracer.python.logger  # noqa: F401
 
-            importlib.reload(logger)
+            importlib.reload(sys.modules["dftracer.python.logger"])
 
-            from dftracer.logger.logger import NoOpProfiler
+            from dftracer.python import NoOpProfiler
 
             noop = NoOpProfiler()
 
@@ -364,11 +367,11 @@ if __name__ == "__main__":
         """Test profiler behavior when DFTRACER_ENABLE is False."""
         # This test doesn't need subprocess since it tests disabled behavior
         with patch.dict(os.environ, {"DFTRACER_ENABLE": "0"}):
-            from dftracer.logger import logger
+            import dftracer.python.logger  # noqa: F401
 
-            importlib.reload(logger)
+            importlib.reload(sys.modules["dftracer.python.logger"])
 
-            from dftracer.logger import compute, dftracer
+            from dftracer.python import compute, dftracer
 
             # Test that operations work even when disabled
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -386,12 +389,12 @@ if __name__ == "__main__":
         # Test that signal handlers are properly registered
         # We can't easily test the actual signal handling without triggering it,
         # but we can verify the setup code path is covered
-        from dftracer.logger.logger import capture_signal
+        from dftracer.python.common import capture_signal
 
         # Test the capture_signal function with a mock
         mock_frame = MagicMock()
 
-        with patch("dftracer.logger.logger.dftracer") as mock_dftracer:
+        with patch("dftracer.python.common.dftracer") as mock_dftracer:
             mock_instance = MagicMock()
             mock_dftracer.get_instance.return_value = mock_instance
 

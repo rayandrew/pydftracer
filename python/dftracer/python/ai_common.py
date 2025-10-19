@@ -1,15 +1,16 @@
 import functools
 import sys
-from typing import Any, Callable, Iterator, Optional, TypeVar, cast, overload
+from typing import Any, Callable, Dict, Iterator, List, Optional, overload
 
-from dftracer.python.env import *
 from dftracer.python.common import *
+from dftracer.python.env import *
 
-dft_fn = None
-dftracer = None
+dft_fn = None  # type: ignore
+dftracer = None  # type: ignore
 
 if sys.version_info >= (3, 11):
-    from enum import StrEnum as StringEnum, auto
+    from enum import StrEnum as StringEnum
+    from enum import auto
     # StrEnum in 3.11 already lower-case
 else:
     from enum import Enum, auto
@@ -18,17 +19,20 @@ else:
     class StringEnum(str, Enum):
         # this is a specific version that will lowercase the values
 
-        def __new__(cls, value, *args, **kwargs):
+        def __new__(cls, value: Any, *args: Any, **kwargs: Any) -> "StringEnum":
             if not isinstance(value, (str, auto)):
-                raise TypeError(
+                raise TypeError(  # pragma: no cover
                     f"Values of StrEnums must be strings: {value!r} is a {type(value)}"
                 )
             return super().__new__(cls, value, *args, **kwargs)
 
-        def __str__(self):
+        def __str__(self) -> str:
             return str(self.value)
 
-        def _generate_next_value_(name, *_):
+        @staticmethod
+        def _generate_next_value_(
+            name: str, start: int, count: int, last_values: List[Any]
+        ) -> str:
             return name.lower()
 
 
@@ -43,7 +47,7 @@ START_METADATA_NAME = "start"
 STOP_METADATA_NAME = "end"
 
 
-def get_iter_block_name(name: str):
+def get_iter_block_name(name: str) -> str:
     return (
         f"{name}{CTX_SEPARATOR}{BLOCK_NAME}"
         if not name.endswith(f"{CTX_SEPARATOR}{BLOCK_NAME}")
@@ -51,36 +55,13 @@ def get_iter_block_name(name: str):
     )
 
 
-def get_iter_handle_name(name: str):
+def get_iter_handle_name(name: str) -> str:
     return (
         f"{name}{CTX_SEPARATOR}{ITER_NAME}"
         if not name.endswith(f"{CTX_SEPARATOR}{ITER_NAME}")
         else name
     )
 
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-class DummyProfiler:
-    def __init__(self):
-        self._cat = "dummy"
-        self._name = "dummy"
-        self._arguments_int = {}
-        self._arguments_float = {}
-        self._arguments_string = {}
-        self._enable = True
-
-    def __call__(self, *args, **kwargs):
-        return self
-
-    def log_event(self, *args, **kwargs):
-        pass
-
-    def log_metadata_event(self, *args, **kwargs):
-        pass
-
-    def finalize(self):
-        pass
 
 class _DFTracerAI:
     def __init__(
@@ -92,7 +73,7 @@ class _DFTracerAI:
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
         enable: bool = True,
-    ):
+    ) -> None:
         if not name:
             name = cat
         global dft_fn
@@ -105,51 +86,59 @@ class _DFTracerAI:
             image_size=image_size,
             enable=enable,
         )
-        if not self.profiler:
-            self.profiler = DummyProfiler()
 
     @overload
     def __call__(
-        fn: F,
+        self,
+        fn: Callable[P, R],
         *,
         enable: Optional[bool] = None,
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
-        args: Optional[dict[str, Any]] = None,
-    ) -> F: ...
+        args: Optional[Dict[str, Any]] = None,
+    ) -> Callable[P, R]: ...
 
     @overload
     def __call__(
+        self,
         *,
         enable: Optional[bool] = None,
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
-        args: Optional[dict[str, Any]] = None,
+        args: Optional[Dict[str, Any]] = None,
     ) -> "DFTracerAI": ...
 
     def __call__(
         self,
-        fn: Optional[F] = None,
+        fn: Optional[Callable[P, R]] = None,
         *,
         enable: Optional[bool] = None,
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
-        image_size=None,
-        args=None,
-    ):
+        image_size: Optional[Any] = None,
+        args: Optional[Dict[str, Any]] = None,
+    ) -> Union[Callable[P, R], "DFTracerAI"]:
         if epoch is not None:
-            self.profiler._arguments_int["epoch"] = TagValue(epoch, TagDType.INT, TagType.KEY).value()
+            self.profiler._arguments_int["epoch"] = TagValue(
+                epoch, TagDType.INT, TagType.KEY
+            ).value()
         if step is not None:
-            self.profiler._arguments_int["step"] = TagValue(step, TagDType.INT, TagType.KEY).value()
+            self.profiler._arguments_int["step"] = TagValue(
+                step, TagDType.INT, TagType.KEY
+            ).value()
         if image_idx is not None:
-            self.profiler._arguments_int["image_idx"] = TagValue(image_idx, TagDType.INT, TagType.KEY).value()
+            self.profiler._arguments_int["image_idx"] = TagValue(
+                image_idx, TagDType.INT, TagType.KEY
+            ).value()
         if image_size is not None:
-            self.profiler._arguments_float["image_size"] = TagValue(image_size, TagDType.FLOAT, TagType.KEY).value()
+            self.profiler._arguments_float["image_size"] = TagValue(
+                image_size, TagDType.FLOAT, TagType.KEY
+            ).value()
         args = args or {}
         for key, value in args.items():
             if isinstance(value, TagValue):
@@ -157,19 +146,25 @@ class _DFTracerAI:
             else:
                 new_value = value
             if isinstance(new_value, int):
-                self.profiler._arguments_int[key] = TagValue(new_value, TagDType.INT, TagType.KEY).value()
+                self.profiler._arguments_int[key] = TagValue(
+                    new_value, TagDType.INT, TagType.KEY
+                ).value()
             elif isinstance(new_value, float):
-                self.profiler._arguments_float[key] = TagValue(new_value, TagDType.FLOAT, TagType.KEY).value()
+                self.profiler._arguments_float[key] = TagValue(
+                    new_value, TagDType.FLOAT, TagType.KEY
+                ).value()
             else:
-                self.profiler._arguments_string[key] = TagValue(str(new_value), TagDType.STRING, TagType.KEY).value()
+                self.profiler._arguments_string[key] = TagValue(
+                    str(new_value), TagDType.STRING, TagType.KEY
+                ).value()
 
         is_enabled = self.profiler._enable if enable is None else enable
 
         if fn:
 
-            def _decorator(f):
+            def _decorator(f: Callable[P, R]) -> Callable[P, R]:
                 @functools.wraps(f)
-                def wrapper(*args, **kwargs):
+                def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                     if is_enabled:
                         with self:
                             return f(*args, **kwargs)
@@ -177,22 +172,19 @@ class _DFTracerAI:
 
                 return wrapper
 
-            return cast(F, _decorator(fn))
+            return _decorator(fn)
         else:
-            return cast(
-                F,
-                DFTracerAI(
-                    cat=self.profiler._cat,
-                    name=self.profiler._name,
-                    epoch=epoch,
-                    step=step,
-                    image_idx=image_idx,
-                    image_size=image_size,
-                    enable=is_enabled,
-                ),
+            return DFTracerAI(
+                cat=self.profiler._cat,
+                name=self.profiler._name,
+                epoch=epoch,
+                step=step,
+                image_idx=image_idx,
+                image_size=image_size,
+                enable=is_enabled,
             )
 
-    def __enter__(self):
+    def __enter__(self) -> "_DFTracerAI":
         self.profiler.__enter__()
         # Reset flush state to ensure proper event logging on each context manager entry.
         # The underlying DFTracer logger was designed for one-time use objects, but this
@@ -201,11 +193,10 @@ class _DFTracerAI:
         self.profiler._flush = False
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.profiler.__exit__(exc_type, exc_val, exc_tb)
-        return False
 
-    def start(self, metadata: bool = False):
+    def start(self, metadata: bool = False) -> None:
         global dftracer
         if metadata:
             time = dftracer.get_instance().get_time()
@@ -216,7 +207,7 @@ class _DFTracerAI:
         else:
             self.__enter__()
 
-    def stop(self, metadata: bool = False):
+    def stop(self, metadata: bool = False) -> None:
         global dftracer
         if metadata:
             time = dftracer.get_instance().get_time()
@@ -227,18 +218,18 @@ class _DFTracerAI:
         else:
             self.__exit__(None, None, None)
 
-    def enable(self):
+    def enable(self) -> None:
         self.profiler._enable = True
 
-    def disable(self):
+    def disable(self) -> None:
         self.profiler._enable = False
 
     @property
-    def cat(self):
+    def cat(self) -> str:
         return self.profiler._cat
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.profiler._name
 
     def update(
@@ -247,30 +238,44 @@ class _DFTracerAI:
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
-        args: Optional[dict[str, Any]] = None,
-    ):
+        args: Optional[Dict[str, Any]] = None,
+    ) -> "_DFTracerAI":
         if args is None:
             args = {}
         if DFTRACER_ENABLE and self.profiler._enable:
             if epoch is not None:
-                self.profiler._arguments_int["epoch"] = TagValue(epoch, TagDType.INT, TagType.KEY).value()
+                self.profiler._arguments_int["epoch"] = TagValue(
+                    epoch, TagDType.INT, TagType.KEY
+                ).value()
             if step is not None:
-                self.profiler._arguments_int["step"] = TagValue(step, TagDType.INT, TagType.KEY).value()
+                self.profiler._arguments_int["step"] = TagValue(
+                    step, TagDType.INT, TagType.KEY
+                ).value()
             if image_idx is not None:
-                self.profiler._arguments_int["image_idx"] = TagValue(image_idx, TagDType.INT, TagType.KEY).value()
+                self.profiler._arguments_int["image_idx"] = TagValue(
+                    image_idx, TagDType.INT, TagType.KEY
+                ).value()
             if image_size is not None:
-                self.profiler._arguments_float["image_size"] = TagValue(image_size, TagDType.FLOAT, TagType.KEY).value()
+                self.profiler._arguments_float["image_size"] = TagValue(
+                    image_size, TagDType.FLOAT, TagType.KEY
+                ).value()
             for key, value in args.items():
                 if isinstance(value, TagValue):
                     new_value = value._value
                 else:
                     new_value = value
                 if isinstance(new_value, int):
-                    self.profiler._arguments_int[key] = TagValue(new_value, TagDType.INT, TagType.KEY).value()
+                    self.profiler._arguments_int[key] = TagValue(
+                        new_value, TagDType.INT, TagType.KEY
+                    ).value()
                 elif isinstance(new_value, float):
-                    self.profiler._arguments_float[key] = TagValue(new_value, TagDType.FLOAT, TagType.KEY).value()
+                    self.profiler._arguments_float[key] = TagValue(
+                        new_value, TagDType.FLOAT, TagType.KEY
+                    ).value()
                 else:
-                    self.profiler._arguments_string[key] = TagValue(str(new_value), TagDType.STRING, TagType.KEY).value()
+                    self.profiler._arguments_string[key] = TagValue(
+                        str(new_value), TagDType.STRING, TagType.KEY
+                    ).value()
         return self
 
     def iter(
@@ -281,7 +286,7 @@ class _DFTracerAI:
         include_iter: bool = True,
         iter_name: Optional[str] = None,
         block_name: Optional[str] = None,
-    ):
+    ) -> Iterator:
         global dftracer
         iter_name = iter_name or get_iter_handle_name(self.profiler._name)
         block_name = block_name or get_iter_block_name(self.profiler._name)
@@ -289,7 +294,6 @@ class _DFTracerAI:
 
         start: int = 0
         if DFTRACER_ENABLE and self.profiler._enable:
-            self.profiler_arguments = {}
             start = dftracer.get_instance().get_time()
 
         for v in iterator:
@@ -301,7 +305,9 @@ class _DFTracerAI:
 
             if DFTRACER_ENABLE and self.profiler._enable:
                 t1 = dftracer.get_instance().get_time()
-                self.profiler._arguments_int[ITER_COUNT_NAME] = TagValue(iter_val, TagDType.INT, TagType.KEY).value()
+                self.profiler._arguments_int[ITER_COUNT_NAME] = TagValue(
+                    iter_val, TagDType.INT, TagType.KEY
+                ).value()
                 if include_iter:
                     dftracer.get_instance().enter_event()
                     dftracer.get_instance().log_event(
@@ -311,7 +317,7 @@ class _DFTracerAI:
                         duration=end - start,
                         int_args=self.profiler._arguments_int,
                         float_args=self.profiler._arguments_float,
-                        string_args=self.profiler._arguments_string
+                        string_args=self.profiler._arguments_string,
                     )
                     dftracer.get_instance().exit_event()
 
@@ -324,7 +330,7 @@ class _DFTracerAI:
                         duration=t1 - t0,
                         int_args=self.profiler._arguments_int,
                         float_args=self.profiler._arguments_float,
-                        string_args=self.profiler._arguments_string
+                        string_args=self.profiler._arguments_string,
                     )
                     dftracer.get_instance().exit_event()
 
@@ -353,17 +359,22 @@ class DFTracerAI(_DFTracerAI):
             image_size=image_size,
             enable=enable,
         )
-        self._children: dict[str, DFTracerAI] = {}
+        self._children: Dict[str, DFTracerAI] = {}
 
-    def create_children(self, names: dict[str, str]):
+    def create_children(self, names: Dict[str, str]) -> None:
         for attr, name in names.items():
+            epoch_tuple = self.profiler._arguments_int.get("epoch")
+            step_tuple = self.profiler._arguments_int.get("step")
+            image_idx_tuple = self.profiler._arguments_int.get("image_idx")
+            image_size_tuple = self.profiler._arguments_float.get("image_size")
+
             tracer = DFTracerAI(
                 cat=self.profiler._cat,
                 name=name,
-                epoch=self.profiler._arguments_int.get("epoch"),
-                step=self.profiler._arguments_int.get("step"),
-                image_idx=self.profiler._arguments_int.get("image_idx"),
-                image_size=self.profiler._arguments_float.get("image_size"),
+                epoch=int(epoch_tuple[1]) if epoch_tuple else None,
+                step=int(step_tuple[1]) if step_tuple else None,
+                image_idx=int(image_idx_tuple[1]) if image_idx_tuple else None,
+                image_size=float(image_size_tuple[1]) if image_size_tuple else None,
                 enable=self.profiler._enable,
             )
             setattr(self, attr, tracer)
@@ -375,8 +386,8 @@ class DFTracerAI(_DFTracerAI):
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
         image_size: Optional[Any] = None,
-        args: Optional[dict[str, Any]] = None,
-    ):
+        args: Optional[Dict[str, Any]] = None,
+    ) -> "DFTracerAI":
         super().update(
             epoch=epoch,
             step=step,
@@ -394,12 +405,12 @@ class DFTracerAI(_DFTracerAI):
             )
         return self
 
-    def enable(self):
+    def enable(self) -> None:
         super().enable()
         for tracer in self._children.values():
             tracer.enable()
 
-    def disable(self):
+    def disable(self) -> None:
         super().disable()
         for tracer in self._children.values():
             tracer.disable()
@@ -409,33 +420,64 @@ class DFTracerAI(_DFTracerAI):
         if _name in self._children:
             return self._children[_name]
 
+        epoch_tuple = self.profiler._arguments_int.get("epoch")
+        step_tuple = self.profiler._arguments_int.get("step")
+        image_idx_tuple = self.profiler._arguments_int.get("image_idx")
+        image_size_tuple = self.profiler._arguments_float.get("image_size")
+
         child = DFTracerAI(
             cat=self.profiler._cat,
             name=_name,
-            epoch=self.profiler._arguments_int.get("epoch"),
-            step=self.profiler._arguments_int.get("step"),
-            image_idx=self.profiler._arguments_int.get("image_idx"),
-            image_size=self.profiler._arguments_float.get("image_size"),
+            epoch=int(epoch_tuple[1]) if epoch_tuple else None,
+            step=int(step_tuple[1]) if step_tuple else None,
+            image_idx=int(image_idx_tuple[1]) if image_idx_tuple else None,
+            image_size=float(image_size_tuple[1]) if image_size_tuple else None,
             enable=self.profiler._enable,
         )
         self._children[_name] = child
         return child
 
+    @overload
     def init(
         self,
-        fn: Optional[F] = None,
+        fn: Callable[P, R],
         *,
         enable: Optional[bool] = None,
         epoch: Optional[int] = None,
         step: Optional[int] = None,
         image_idx: Optional[int] = None,
-        image_size=None,
-        args=None,
-    ) -> "DFTracerAI":
+        image_size: Optional[Any] = None,
+        args: Optional[Dict[str, Any]] = None,
+    ) -> Callable[P, R]: ...
+
+    @overload
+    def init(
+        self,
+        fn: None = None,
+        *,
+        enable: Optional[bool] = None,
+        epoch: Optional[int] = None,
+        step: Optional[int] = None,
+        image_idx: Optional[int] = None,
+        image_size: Optional[Any] = None,
+        args: Optional[Dict[str, Any]] = None,
+    ) -> "DFTracerAI": ...
+
+    def init(
+        self,
+        fn: Optional[Callable[P, R]] = None,
+        *,
+        enable: Optional[bool] = None,
+        epoch: Optional[int] = None,
+        step: Optional[int] = None,
+        image_idx: Optional[int] = None,
+        image_size: Optional[Any] = None,
+        args: Optional[Dict[str, Any]] = None,
+    ) -> Union[Callable[P, R], "DFTracerAI"]:
         _name = f"{self.profiler._name}{CTX_SEPARATOR}{INIT_NAME}"
         if _name in self._children:
-            return self._children[_name](
-                fn=fn,
+            return self._children[_name](  # type: ignore[misc]
+                fn=fn,  # type: ignore[arg-type]
                 enable=enable,
                 epoch=epoch,
                 step=step,
@@ -443,18 +485,23 @@ class DFTracerAI(_DFTracerAI):
                 image_size=image_size,
                 args=args,
             )
+        epoch_tuple = self.profiler._arguments_int.get("epoch")
+        step_tuple = self.profiler._arguments_int.get("step")
+        image_idx_tuple = self.profiler._arguments_int.get("image_idx")
+        image_size_tuple = self.profiler._arguments_float.get("image_size")
+
         child = DFTracerAI(
             cat=self.profiler._cat,
             name=_name,
-            epoch=self.profiler._arguments_int.get("epoch"),
-            step=self.profiler._arguments_int.get("step"),
-            image_idx=self.profiler._arguments_int.get("image_idx"),
-            image_size=self.profiler._arguments_float.get("image_size"),
+            epoch=int(epoch_tuple[1]) if epoch_tuple else None,
+            step=int(step_tuple[1]) if step_tuple else None,
+            image_idx=int(image_idx_tuple[1]) if image_idx_tuple else None,
+            image_size=float(image_size_tuple[1]) if image_size_tuple else None,
             enable=self.profiler._enable,
         )
         self._children[_name] = child
-        return child(
-            fn=fn,
+        return child(  # type: ignore[misc]
+            fn=fn,  # type: ignore[arg-type]
             enable=enable,
             epoch=epoch,
             step=step,
@@ -784,4 +831,3 @@ class AI(DFTracerAI):
             "pipeline": self.pipeline,
         }
 # fmt: on
-    

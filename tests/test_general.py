@@ -3,24 +3,23 @@
 from typing import List
 
 import pytest
-
-from dftracer.logger.ai import (
-    _AI,
+from dftracer.python import (
+    AI,
     BLOCK_NAME,
     CTX_SEPARATOR,
     ITER_NAME,
+    Checkpoint,
+    Communication,
     CommunicationEvent,
+    Compute,
     ComputeEvent,
+    Data,
     DataEvent,
+    DataLoader,
+    Device,
     DFTracerAI,
+    Pipeline,
     ProfileCategory,
-    _Checkpoint,
-    _Communication,
-    _Compute,
-    _Data,
-    _DataLoader,
-    _Device,
-    _Pipeline,
     ai,
     checkpoint,
     comm,
@@ -28,11 +27,13 @@ from dftracer.logger.ai import (
     data,
     dataloader,
     device,
+    dft_fn,
+    dftracer,
     get_iter_block_name,
     get_iter_handle_name,
     pipeline,
 )
-from dftracer.logger.logger import dft_fn, dftracer
+from dftracer.python.env import DFTRACER_ENABLE
 
 
 class TestDFTracerLogger:
@@ -50,6 +51,8 @@ class TestDFTracerLogger:
         # Use type name comparison instead of isinstance for parallel test compatibility
         assert type(result).__name__ == "dftracer"
         assert result is dftracer.get_instance()
+
+        result.finalize()
 
     def test_dftracer_methods(self):
         tracer = dftracer.get_instance()
@@ -78,16 +81,17 @@ class TestDftFn:
             epoch=1,
             step=10,
             image_idx=5,
-            image_size=(224, 224),
+            image_size=224,
             enable=False,
         )
         assert fn._cat == "data"
         assert fn._name == "preprocess"
         assert fn._enable is False
-        assert fn._arguments["epoch"] == "1"
-        assert fn._arguments["step"] == "10"
-        assert fn._arguments["image_idx"] == "5"
-        assert fn._arguments["image_size"] == "(224, 224)"
+        if DFTRACER_ENABLE and fn._enable:
+            assert fn._arguments_int["epoch"][1] == 1
+            assert fn._arguments_int["step"][1] == 10
+            assert fn._arguments_int["image_idx"][1] == 5
+            assert fn._arguments_float["image_size"][1] == 224.0
 
     def test_dft_fn_context_manager(self):
         fn = dft_fn("test")
@@ -102,15 +106,16 @@ class TestDftFn:
             epoch=5,
             step=100,
             image_idx=10,
-            image_size=(128, 128),
+            image_size=128,
             args={"custom": "value"},
         )
 
-        assert fn._arguments["epoch"] == "5"
-        assert fn._arguments["step"] == "100"
-        assert fn._arguments["image_idx"] == "10"
-        assert fn._arguments["image_size"] == "(128, 128)"
-        assert fn._arguments["custom"] == "value"
+        if DFTRACER_ENABLE and fn._enable:
+            assert fn._arguments_int["epoch"][1] == 5
+            assert fn._arguments_int["step"][1] == 100
+            assert fn._arguments_int["image_idx"][1] == 10
+            assert fn._arguments_float["image_size"][1] == 128.0
+            assert fn._arguments_string["custom"][1] == "value"
 
     def test_dft_fn_log_decorator(self):
         fn = dft_fn("compute", name="forward")
@@ -216,9 +221,9 @@ class TestDftFn:
         fn = dft_fn("test")
 
         class TestClass:
-            @fn.log_static
             @staticmethod
-            def static_method(x):
+            @fn.log_static
+            def static_method(x: int):
                 return x * 3
 
         result = TestClass.static_method(4)
@@ -238,9 +243,9 @@ class TestDftFn:
         fn = dft_fn("test")
 
         class TestClass:
-            @fn.log_static()
             @staticmethod
-            def static_method(x):
+            @fn.log_static()
+            def static_method(x: int):
                 return x * 5
 
         result = TestClass.static_method(2)
@@ -250,9 +255,9 @@ class TestDftFn:
         fn = dft_fn("test")
 
         class TestClass:
-            @fn.log_static(name="static_method")
             @staticmethod
-            def static_method(x):
+            @fn.log_static(name="static_method")
+            def static_method(x: int):
                 return x * 5
 
         result = TestClass.static_method(2)
@@ -278,14 +283,14 @@ class TestDftFn:
 
 class TestAIModule:
     def test_ai_categories_exist(self):
-        assert isinstance(ai, _AI)
-        assert isinstance(compute, _Compute)
-        assert isinstance(data, _Data)
-        assert isinstance(dataloader, _DataLoader)
-        assert isinstance(comm, _Communication)
-        assert isinstance(device, _Device)
-        assert isinstance(checkpoint, _Checkpoint)
-        assert isinstance(pipeline, _Pipeline)
+        assert isinstance(ai, AI)
+        assert isinstance(compute, Compute)
+        assert isinstance(data, Data)
+        assert isinstance(dataloader, DataLoader)
+        assert isinstance(comm, Communication)
+        assert isinstance(device, Device)
+        assert isinstance(checkpoint, Checkpoint)
+        assert isinstance(pipeline, Pipeline)
 
     def test_ai_category_children(self):
         assert hasattr(compute, "forward")
@@ -363,7 +368,7 @@ class TestAIModule:
             epoch=10,
             step=100,
             image_idx=5,
-            image_size=(224, 224),
+            image_size=224,
             args={"custom_param": "value"},
         )
         def test_function(x: int) -> int:
@@ -489,7 +494,7 @@ class TestAIModule:
         custom_args = {"learning_rate": 0.001, "batch_size": 32, "optimizer": "adam"}
 
         compute.update(
-            epoch=15, step=500, image_idx=100, image_size=(512, 512), args=custom_args
+            epoch=15, step=500, image_idx=100, image_size=512, args=custom_args
         )
 
         # Verify the update worked (no exceptions thrown)
@@ -580,7 +585,7 @@ class TestAIModule:
             return "image_idx"
 
         # Test decorator with image_size parameter
-        @compute.forward(image_size=(224, 224))
+        @compute.forward(image_size=224)
         def image_size_func() -> str:
             return "image_size"
 

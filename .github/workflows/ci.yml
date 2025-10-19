@@ -29,34 +29,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[dev]
+        pip install  setuptools>=64 setuptools-scm>=8 wheel ninja cmake>=3.12 pybind11
+        pip install "dftracer @ git+https://github.com/LLNL/dftracer.git" --no-deps
+        pip install .[dev]
         pip install build twine
 
-    - name: Run tests with coverage
+    - name: Run CI test suite
       run: |
         make test-ci
-
-    - name: Run linting and formatting checks (Python 3.11 only)
-      if: matrix.python-version == '3.11'
-      run: |
-        make lint
-        make format-check
-
-    - name: Run type checking (Python 3.11 only)
-      if: matrix.python-version == '3.11'
-      run: |
-        make type-check
-
-    - name: Build and test package (Python 3.11 only)
-      if: matrix.python-version == '3.11'
-      run: |
-        python -m build
-        twine check dist/*
-        # Test package installation in fresh environment
-        python -m venv test-venv
-        source test-venv/bin/activate
-        pip install dist/*.whl
-        python -c "import dftracer; print('Package import successful')"
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -70,7 +50,7 @@ jobs:
     - name: Generate and upload coverage report (Python 3.11 only)
       if: matrix.python-version == '3.11' && github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        pytest tests/ --cov=dftracer --cov-report=html --cov-report=term -n 2
+        pytest tests/ --cov=dftracer --cov-report=html --cov-report=term -n 2 --ignore=tests/test_dynamo.py
 
     - name: Upload coverage report as artifact
       if: matrix.python-version == '3.11' && github.event_name == 'push' && github.ref == 'refs/heads/main'

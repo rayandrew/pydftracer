@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from setuptools import setup
-
 from setuptools_scm import ScmVersion
 
 
 def myversion_func(version: ScmVersion) -> str:
     from setuptools_scm.version import only_version
+
     return version.format_next_version(only_version, fmt="{tag}.dev{distance}")
 
 

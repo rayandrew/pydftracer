@@ -1,22 +1,32 @@
+import os
 from dataclasses import dataclass
 from typing import List, Optional
-import os
-from dftracer.python.logger import dftracer
-import torch
 
+from dftracer.python.logger import dftracer
+
+__all__ = ["dft_fn", "TraceRecord"]
 
 DFTRACER_ENABLE_ENV = "DFTRACER_ENABLE"
 DFTRACER_ENABLE = True if os.getenv(DFTRACER_ENABLE_ENV, "0") == "1" else False
 
-if DFTRACER_ENABLE:
+try:
+    import torch
+
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    torch = None  # type: ignore
+
+if DFTRACER_ENABLE and TORCH_AVAILABLE:
     try:
-        import torch
         from functorch.compile import make_boxed_func
 
         # Alpha feature from: https://docs.pytorch.org/docs/stable/torch.compiler_custom_backends.html#custom-backends-after-aotautograd
         from torch._dynamo.backends.common import aot_autograd
     except ImportError:
-        raise RuntimeError("DFTracer requires PyTorch to be installed")
+        raise RuntimeError(
+            "DFTracer dynamo requires PyTorch and functorch to be installed"
+        )
 
 
 # Data structure for trace records
@@ -86,8 +96,7 @@ class dft_fn:
             return f_py
 
         def _decorator(func):
-
-            def enhanced_trace_wrapper(gm: torch.fx.GraphModule, example, **kwargs):
+            def enhanced_trace_wrapper(gm: "torch.fx.GraphModule", example, **kwargs):  # type: ignore
                 """Enhanced custom trace function for Dynamo"""
                 # if not (DFTRACER_ENABLE and self._enabled):
                 #     return

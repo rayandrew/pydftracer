@@ -1,6 +1,7 @@
-from importlib.metadata import version, PackageNotFoundError
-from dftracer.python.logger import *
+from importlib.metadata import PackageNotFoundError, version
+
 from dftracer.python.ai import *
+from dftracer.python.logger import *
 
 try:
     __version__ = version("pydftracer")
