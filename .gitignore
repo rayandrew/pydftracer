@@ -208,3 +208,5 @@ __marimo__/
 
 tests/*_output
 tests/*.pfw
+
+_version.py

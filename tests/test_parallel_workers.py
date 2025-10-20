@@ -5,8 +5,6 @@ Parallel Workers Test Suite for dftracer
 
 import os
 import shutil
-import subprocess
-import tempfile
 import threading
 from multiprocessing import get_context
 from time import sleep
@@ -15,8 +13,9 @@ import h5py
 import numpy as np
 import PIL.Image as im
 import pytest
+from dftracer.python import dft_fn, dftracer
 
-from tests.utils import get_dftracer_preload_path
+from .utils import run_test_in_spawn_process
 
 
 class IOHandler:
@@ -62,7 +61,6 @@ def init():
 
 
 def run_single_parallel_workers_test(test_config):
-    # Create test directories with unique names per test
     base_dir = os.path.join(
         os.path.dirname(__file__), "test_parallel_workers_subprocess_output"
     )
@@ -74,31 +72,11 @@ def run_single_parallel_workers_test(test_config):
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(f"{data_dir}/{test_config['format']}", exist_ok=True)
 
-    # Set environment variables
-    for env_var, value in test_config["env"].items():
-        os.environ[env_var] = value
-
-    # Set DFTRACER_DATA_DIR if specified
-    if "DFTRACER_DATA_DIR" in test_config["env"]:
-        os.environ["DFTRACER_DATA_DIR"] = test_config["env"]["DFTRACER_DATA_DIR"]
-    else:
-        os.environ["DFTRACER_DATA_DIR"] = data_dir
-
-    # Configure log file
     log_file = os.path.join(log_dir, f"{test_config['name']}.pfw")
-    if "DFTRACER_LOG_FILE" in test_config["env"]:
-        log_file = test_config["env"]["DFTRACER_LOG_FILE"].replace(
-            "${test_name}", test_config["name"]
-        )
-    os.environ["DFTRACER_LOG_FILE"] = log_file
 
     print(
         f"Running parallel workers test {test_config['name']} with log file: {log_file}"
     )
-
-    # Initialize dftracer
-
-    from dftracer.logger import dft_fn, dftracer
 
     log_inst = dftracer.initialize_log(
         logfile=log_file, data_dir=data_dir, process_id=-1
@@ -173,7 +151,6 @@ def run_single_parallel_workers_test(test_config):
         for i in dft_fn_instance.iter(range(step)):
             print(i)
 
-    # Execute the test workflow
     try:
         dft_fn_instance.log_metadata("key", "value")
         posix_calls((data_dir, 20, False))
@@ -196,13 +173,11 @@ def run_single_parallel_workers_test(test_config):
         )
         t4 = threading.Thread(target=log_events, args=(3,))
 
-        # Start all threads
         t1.start()
         t2.start()
         t3.start()
         t4.start()
 
-        # Wait for all threads to complete
         t1.join()
         t2.join()
         t3.join()
@@ -217,7 +192,6 @@ def run_single_parallel_workers_test(test_config):
             pool.map(posix_calls, ((data_dir, index, True),))
         index = index + 1
 
-        # Testing named parameters
         data = np.ones((test_config["record_size"], 1), dtype=np.uint8)
         data_gen(
             num_files=test_config["num_files"],
@@ -243,111 +217,62 @@ def run_single_parallel_workers_test(test_config):
 
 
 class TestParallelWorkers:
-    @pytest.mark.subprocess
     @pytest.mark.parametrize(
         "test_config",
         [
             {
                 "name": "parallel_workers_npz",
-                "env": {
-                    "DFTRACER_INIT": "PRELOAD",
-                    "LD_PRELOAD": get_dftracer_preload_path(),
-                    "DFTRACER_INC_METADATA": "1",
-                    "DFTRACER_ENABLE": "1",
-                },
                 "format": "npz",
                 "num_files": 2,
                 "niter": 1,
                 "record_size": 1024,
+                "env": {
+                    "DFTRACER_ENABLE": "1",
+                    "DFTRACER_INC_METADATA": "1",
+                    "DFTRACER_TRACE_COMPRESSION": "0",
+                },
             },
             {
                 "name": "parallel_workers_jpeg",
-                "env": {
-                    "DFTRACER_INIT": "PRELOAD",
-                    "LD_PRELOAD": get_dftracer_preload_path(),
-                    "DFTRACER_INC_METADATA": "1",
-                    "DFTRACER_ENABLE": "1",
-                },
                 "format": "jpeg",
                 "num_files": 1,
                 "niter": 1,
                 "record_size": 512,
+                "env": {
+                    "DFTRACER_ENABLE": "1",
+                    "DFTRACER_INC_METADATA": "1",
+                    "DFTRACER_TRACE_COMPRESSION": "0",
+                },
             },
             {
                 "name": "parallel_workers_hdf5",
-                "env": {
-                    "DFTRACER_INIT": "PRELOAD",
-                    "LD_PRELOAD": get_dftracer_preload_path(),
-                    "DFTRACER_INC_METADATA": "1",
-                    "DFTRACER_ENABLE": "1",
-                },
                 "format": "hdf5",
                 "num_files": 1,
                 "niter": 1,
                 "record_size": 256,
-            },
-            {
-                "name": "parallel_workers_disabled",
                 "env": {
-                    "DFTRACER_ENABLE": "0",
+                    "DFTRACER_ENABLE": "1",
+                    "DFTRACER_INC_METADATA": "1",
+                    "DFTRACER_TRACE_COMPRESSION": "0",
                 },
-                "format": "npz",
-                "num_files": 1,
-                "niter": 1,
-                "record_size": 256,
             },
         ],
     )
     def test_parallel_workers(self, test_config):
-        """Run each parallel workers test configuration in a separate subprocess"""
+        run_test_in_spawn_process(run_single_parallel_workers_test, test_config)
 
-        # Create a temporary Python script that runs the test
-        test_script_template = f'''
-import sys
-import os
-sys.path.insert(0, "{os.path.dirname(os.path.dirname(__file__))}")
-
-from tests.test_parallel_workers import run_single_parallel_workers_test
-
-test_config = {test_config!r}
-
-if __name__ == "__main__":
-    try:
-        result = run_single_parallel_workers_test(test_config)
-        sys.exit(0 if result else 1)
-    except Exception as e:
-        print(f"Test failed with error: {{e}}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
-'''
-
-        # Create a temporary script file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(test_script_template)
-            f.flush()
-            script_path = f.name
-
-            try:
-                # Run the test script in subprocess
-                result = subprocess.run(
-                    ["python", script_path], capture_output=True, text=True, timeout=120
-                )
-
-                print(f"Test {test_config['name']} subprocess output:")
-                print(result.stdout)
-                if result.stderr:
-                    print(f"Test {test_config['name']} subprocess errors:")
-                    print(result.stderr)
-
-                assert result.returncode == 0, (
-                    f"Test {test_config['name']} failed in subprocess"
-                )
-
-            finally:
-                # Clean up temporary script
-                if os.path.exists(script_path):
-                    os.unlink(script_path)
+    def test_parallel_workers_disabled(self):
+        test_config = {
+            "name": "parallel_workers_disabled",
+            "format": "npz",
+            "num_files": 1,
+            "niter": 1,
+            "record_size": 256,
+            "env": {
+                "DFTRACER_ENABLE": "0",
+            },
+        }
+        run_test_in_spawn_process(run_single_parallel_workers_test, test_config)
 
 
 if __name__ == "__main__":

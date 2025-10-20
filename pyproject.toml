@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=80", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dftracer"
-version = "0.1.0"
+name = "pydftracer"
+dynamic = ["version"]
 description = "Python libs for DFTracer"
 readme = "README.md"
 license = {text = "MIT"}
@@ -36,11 +36,7 @@ Repository = "https://github.com/LLNL/pydftracer"
 Documentation = "https://dftracer.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
-full = [
-    "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
-]
 dev = [
-    "pydftracer @ git+https://github.com/LLNL/dftracer.git@remove-dftracer",
     "pytest>=6.0",
     "pytest-cov",
     "pytest-xdist",
@@ -49,14 +45,18 @@ dev = [
     "pillow",
     "ruff",
     "mypy",
-    "torch>=2.5.1"
 ]
 dynamo = [
     "torch>=2.5.1"
 ]
 
 [tool.setuptools.package-dir]
-dftracer = "dftracer"
+"" = "python"
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["dftracer*"]
+namespaces = true
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -72,12 +72,12 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["dftracer"]
+source = ["python/dftracer"]
 omit = [
     "tests/*",
     "demo_*.py",
     "test_*.py",
-    "dftracer/dbg/*",
+    "python/dftracer/dbg/*",
 ]
 
 [tool.coverage.report]
@@ -111,7 +111,15 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B011", "B023"]  # Allow loop variable binding in tests
+"tests/*" = ["B011", "B023"]
+"python/dftracer/python/logger.py" = ["E402", "F405"]
+"python/dftracer/python/dbg/logger.py" = ["E402", "F405"]
+"python/dftracer/python/dbg/ai.py" = ["E402"]
+"python/dftracer/python/ai.py" = ["E402"]
+"python/dftracer/python/ai_common.py" = ["F405"]
+"python/dftracer/python/ai_init.py" = ["F405"]
+"python/dftracer/python/common.py" = ["E701", "F405"]
+"python/dftracer/python/dynamo.py" = ["B904"]
 
 [tool.mypy]
 python_version = "3.9"
@@ -119,3 +127,20 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "functorch.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = "dftracer.python.dynamo"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+version_file = "python/dftracer/python/_version.py"
