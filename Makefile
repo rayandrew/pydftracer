@@ -13,13 +13,13 @@ install:
 	pip install -e .[dev]
 
 test:
-	pytest tests/ $(COV_FLAGS_BASE) -v --ignore=tests/test_dynamo.py
+	pytest tests/ $(COV_FLAGS_BASE) -v
 
 test-parallel: ## Run tests with parallel execution
-	pytest tests/ $(COV_FLAGS_BASE) -v -n 4 --ignore=tests/test_dynamo.py
+	pytest tests/ $(COV_FLAGS_BASE) -v -n 4
 
 test-subprocess: ## Run subprocess tests
-	pytest tests/ -m subprocess $(PYTEST_FLAGS) -n 4 --ignore=tests/test_dynamo.py
+	pytest tests/ -m subprocess $(PYTEST_FLAGS) -n 4
 
 
 test-ci: ## Run complete CI test suite (tests + linting + type checking)
@@ -35,6 +35,11 @@ test-ci: ## Run complete CI test suite (tests + linting + type checking)
 	@echo ""
 	@echo "✅ All CI checks passed! ✅"
 
+test-dynamo: ## Run Dynamo tests with PyTorch
+	@echo "=== Running Dynamo tests ==="
+	pytest tests/test_dynamo.py -v -n 4 $(COV_FLAGS) $(PYTEST_FLAGS)
+	@echo "✅ Dynamo tests passed! ✅"
+
 lint:
 	ruff check .
 
@@ -48,7 +53,7 @@ format-check:
 	ruff format --check .
 
 type-check:
-	mypy python/dftracer/python --ignore-missing-imports --exclude python/dftracer/python/dynamo.py
+	mypy python/dftracer/python --ignore-missing-imports
 
 clean:
 	rm -rf build/
@@ -73,6 +78,6 @@ test-ci-quick: ## Run quick CI checks without coverage
 	@echo "Running linting and type checks..."
 	ruff check .
 	ruff format --check .
-	mypy python/dftracer/python --ignore-missing-imports --exclude python/dftracer/python/dynamo.py
+	mypy python/dftracer/python --ignore-missing-imports
 	@echo ""
 	@echo "Quick checks passed! ✅"

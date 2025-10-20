@@ -128,6 +128,19 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "functorch.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = "dftracer.python.dynamo"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
 version_file = "python/dftracer/python/_version.py"

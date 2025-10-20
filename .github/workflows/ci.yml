@@ -38,6 +38,11 @@ jobs:
       run: |
         make test-ci
 
+    - name: Run Dynamo tests
+      run: |
+        pip install torch
+        make test-dynamo
+
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
       uses: codecov/codecov-action@v3

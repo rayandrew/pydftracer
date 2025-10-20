@@ -193,6 +193,10 @@ class _DFTracerAI:
         self.profiler._flush = False
         return self
 
+    def get_time(self) -> int:
+        global dftracer
+        return dftracer.get_instance().get_time()
+
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.profiler.__exit__(exc_type, exc_val, exc_tb)
 
@@ -217,6 +221,9 @@ class _DFTracerAI:
             )
         else:
             self.__exit__(None, None, None)
+
+    def reset(self) -> None:
+        self.profiler.reset()
 
     def enable(self) -> None:
         self.profiler._enable = True

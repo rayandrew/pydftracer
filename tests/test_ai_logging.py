@@ -3,7 +3,6 @@
 AI Logging Test Suite for dftracer
 """
 
-import glob
 import os
 import shutil
 from dataclasses import dataclass
@@ -12,9 +11,9 @@ from typing import Optional
 
 import numpy as np
 import pytest
-from dftracer.python import DFTRACER_ENABLE, ai, dftracer
+from dftracer.python import ai, dftracer
 
-from .utils import run_test_in_spawn_process
+from .utils import run_test_in_spawn_process, validate_log_files
 
 
 @dataclass
@@ -184,7 +183,6 @@ def run_ai_logging_test(test_config):
     )
 
     try:
-        cpp_library_available = True
         hook = Hook()
         df_logger = dftracer.initialize_log(
             logfile=log_file, data_dir=data_dir, process_id=-1
@@ -192,69 +190,9 @@ def run_ai_logging_test(test_config):
         train(args, hook)
         df_logger.finalize()
 
-        event_count = 0
-        if DFTRACER_ENABLE:
-            log_pattern = log_file.replace(".pfw", "*-app.pfw")
-            log_files = glob.glob(log_pattern)
-
-            if not log_files and os.path.exists(log_file):
-                log_files = [log_file]
-
-            if not log_files:
-                log_pattern_simple = log_file.replace(".pfw", "*.pfw")
-                log_files = glob.glob(log_pattern_simple)
-
-            print(f"Looking for log files with pattern: {log_pattern}")
-            print(f"Found log files: {log_files}")
-
-            for log_file_path in log_files:
-                if os.path.exists(log_file_path):
-                    try:
-                        with open(log_file_path) as f:
-                            lines = f.readlines()
-                            event_count += len(lines)
-                        print(f"Found {len(lines)} events in {log_file_path}")
-                    except Exception as e:
-                        print(f"Error reading {log_file_path}: {e}")
-
-            if event_count == 0:
-                log_dir = os.path.dirname(log_file)
-                if os.path.exists(log_dir):
-                    log_dir_files = os.listdir(log_dir)
-                    print(f"Files in log directory: {log_dir_files}")
-                else:
-                    print(f"Log directory does not exist: {log_dir}")
-
-                try:
-                    import dftracer.dftracer as cpp_libs  # noqa: F401
-
-                    print("dftracer C++ library is available")
-                except ImportError:
-                    cpp_library_available = False
-                    print(
-                        "dftracer C++ library is NOT available - tests will run in no-op mode"
-                    )
-
-        print(f"Test {test_config['name']} completed with {event_count} events")
-
+        # Validate log files using the common utility
         expected_count = test_config.get("expected_events", 0)
-        print(f"Expected event count: {expected_count}")
-        if not DFTRACER_ENABLE:
-            assert event_count == 0, (
-                f"Expected 0 events when DFTRACER_ENABLE=0 but got {event_count} for test {test_config['name']}"
-            )
-        elif not cpp_library_available:
-            assert event_count == 0, (
-                f"Expected 0 events when C++ library not available but got {event_count} for test {test_config['name']}"
-            )
-        elif expected_count > 0:
-            assert event_count == expected_count, (
-                f"Expected {expected_count} events but got {event_count} for test {test_config['name']}"
-            )
-        else:
-            assert event_count > 5, (
-                f"Expected some events but got {event_count} for test {test_config['name']}"
-            )
+        validate_log_files(log_file, test_config["name"], expected_count)
     finally:
         shutil.rmtree(test_base_dir, ignore_errors=True)
 
@@ -265,6 +203,15 @@ class TestAILogging:
     @pytest.mark.parametrize(
         "test_config",
         [
+            {
+                "name": "disabled",
+                "num_files": 2,
+                "niter": 1,
+                "expected_events": 0,
+                "env": {
+                    "DFTRACER_ENABLE": "0",
+                },
+            },
             {
                 "name": "normal",
                 "num_files": 2,
@@ -358,18 +305,6 @@ class TestAILogging:
         ],
     )
     def test_ai_logging(self, test_config):
-        run_test_in_spawn_process(run_ai_logging_test, test_config)
-
-    def test_ai_logging_disabled(self):
-        test_config = {
-            "name": "disabled",
-            "num_files": 2,
-            "niter": 1,
-            "expected_events": 0,
-            "env": {
-                "DFTRACER_ENABLE": "0",
-            },
-        }
         run_test_in_spawn_process(run_ai_logging_test, test_config)
 
 

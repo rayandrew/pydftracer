@@ -179,6 +179,92 @@ def run_test_in_spawn_process(test_func, test_config, timeout=120):
     )
 
 
+def validate_log_files(log_file, test_name, expected_count=0):
+    """
+    Validate DFTracer log files and return event count.
+
+    Args:
+        log_file: Path to the expected log file
+        test_name: Name of the test (for error messages)
+        expected_count: Expected number of events (0 means just check > 5)
+
+    Returns:
+        Tuple of (event_count, cpp_library_available)
+    """
+    import glob
+
+    event_count = 0
+    cpp_library_available = True
+
+    # Check if C++ library is available
+    try:
+        import dftracer.dftracer as cpp_libs  # noqa: F401
+
+        print("dftracer C++ library is available")
+    except ImportError:
+        cpp_library_available = False
+        print("dftracer C++ library is NOT available - tests will run in no-op mode")
+
+    # Check DFTRACER_ENABLE
+    DFTRACER_ENABLE = os.environ.get("DFTRACER_ENABLE", "0") == "1"
+
+    if DFTRACER_ENABLE:
+        # Try different log file patterns
+        log_pattern = log_file.replace(".pfw", "*-app.pfw")
+        log_files = glob.glob(log_pattern)
+
+        if not log_files and os.path.exists(log_file):
+            log_files = [log_file]
+
+        if not log_files:
+            log_pattern_simple = log_file.replace(".pfw", "*.pfw")
+            log_files = glob.glob(log_pattern_simple)
+
+        print(f"Looking for log files with pattern: {log_pattern}")
+        print(f"Found log files: {log_files}")
+
+        for log_file_path in log_files:
+            if os.path.exists(log_file_path):
+                try:
+                    with open(log_file_path) as f:
+                        lines = f.readlines()
+                        event_count += len(lines)
+                    print(f"Found {len(lines)} events in {log_file_path}")
+                except Exception as e:
+                    print(f"Error reading {log_file_path}: {e}")
+
+        if event_count == 0:
+            log_dir = os.path.dirname(log_file)
+            if os.path.exists(log_dir):
+                log_dir_files = os.listdir(log_dir)
+                print(f"Files in log directory: {log_dir_files}")
+            else:
+                print(f"Log directory does not exist: {log_dir}")
+
+    print(f"Test {test_name} completed with {event_count} events")
+
+    # Assertions
+    print(f"Expected event count: {expected_count}")
+    if not DFTRACER_ENABLE:
+        assert event_count == 0, (
+            f"Expected 0 events when DFTRACER_ENABLE=0 but got {event_count} for test {test_name}"
+        )
+    elif not cpp_library_available:
+        assert event_count == 0, (
+            f"Expected 0 events when C++ library not available but got {event_count} for test {test_name}"
+        )
+    elif expected_count > 0:
+        assert event_count == expected_count, (
+            f"Expected {expected_count} events but got {event_count} for test {test_name}"
+        )
+    else:
+        assert event_count > 5, (
+            f"Expected some events but got {event_count} for test {test_name}"
+        )
+
+    return event_count, cpp_library_available
+
+
 def get_dftracer_preload_path():
     """Find the path to libdftracer_preload.so in the virtual environment"""
     try:
