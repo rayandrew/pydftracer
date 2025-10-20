@@ -1,6 +1,6 @@
 # pydftracer
 
-[![Documentation Status](https://readthedocs.org/projects/pydftracer/badge/?version=latest)](https://dftracer.readthedocs.io/projects/pydftracer/)
+[![Documentation Status](https://readthedocs.org/projects/python/badge/?version=latest)](https://dftracer.readthedocs.io/projects/python/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
