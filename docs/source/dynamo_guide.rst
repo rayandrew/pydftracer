@@ -80,45 +80,6 @@ The simplest way to use Dynamo integration is with the ``@dynamo.compile`` decor
    # Finalize
    df_logger.finalize()
 
-Using torch.compile Backend
-----------------------------
-
-Alternative Backend Approach
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You can also use DFTracer as a custom backend for ``torch.compile()``:
-
-.. code-block:: python
-
-   import torch
-   from dftracer.python import dftracer, dftracer_dynamo_backend
-
-   # Initialize logger
-   df_logger = dftracer.initialize_log("dynamo_trace.pfw", "/tmp/data", -1)
-
-   # Define your model
-   class MyModel(torch.nn.Module):
-       def __init__(self):
-           super().__init__()
-           self.layers = torch.nn.Sequential(
-               torch.nn.Linear(784, 256),
-               torch.nn.ReLU(),
-               torch.nn.Linear(256, 10)
-           )
-
-       def forward(self, x):
-           return self.layers(x)
-
-   # Compile with DFTracer backend
-   model = MyModel()
-   compiled_model = torch.compile(model, backend=dftracer_dynamo_backend)
-
-   # Run inference
-   input_tensor = torch.randn(32, 784)
-   output = compiled_model(input_tensor)
-
-   df_logger.finalize()
-
 Advanced Configuration
 ----------------------
 
@@ -230,26 +191,6 @@ For each operation, DFTracer records:
 - Gradient enabled status
 - Duration
 
-Environment Variables
----------------------
-
-Dynamo-Specific Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Enable DFTracer
-   export DFTRACER_ENABLE=1
-
-   # Disable I/O tracing (focus on compute)
-   export DFTRACER_DISABLE_IO=1
-
-   # Include metadata in traces
-   export DFTRACER_INC_METADATA=1
-
-   # Disable compression for easier debugging
-   export DFTRACER_TRACE_COMPRESSION=0
-
 Troubleshooting
 ---------------
 
@@ -262,16 +203,10 @@ Common Issues
 
 .. code-block:: bash
 
-   pip install torch>=2.5.1
-   export DFTRACER_ENABLE=1
-
-**Issue**: ImportError for functorch or dynamo
-
-**Solution**: Install the dynamo optional dependencies
-
-.. code-block:: bash
-
    pip install pydftracer[dynamo]
+   # or 
+   # pip install torch>=2.5.1
+   export DFTRACER_ENABLE=1
 
 Performance Considerations
 --------------------------
