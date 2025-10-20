@@ -3,9 +3,6 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
-import sys
-from pathlib import Path
 
 # Don't add project root to path - we want to use the installed package from site-packages
 # If we add the project root, Python will try to import from source which may cause issues
@@ -16,7 +13,8 @@ autodoc_mock_imports = []
 
 # Try to import the package
 try:
-    import dftracer.python
+    import dftracer.python  # noqa: F401
+
     print("✓ dftracer.python package found and imported successfully.")
 except (ImportError, ModuleNotFoundError) as e:
     print(f"Warning: dftracer.python package not found: {e}")
@@ -29,33 +27,34 @@ except (ImportError, ModuleNotFoundError) as e:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 
-project = 'pydftracer'
+project = "pydftracer"
 copyright = "%Y, Hariharan Devarajan, Ray Andrew Sinurat"
-author = 'Hariharan Devarajan, Ray Andrew Sinurat'
+author = "Hariharan Devarajan, Ray Andrew Sinurat"
 
 # The version info for the project
 # Try to get version from the package
 try:
     from importlib.metadata import version
-    release = version('pydftracer')
-    version = '.'.join(release.split('.')[:2])
+
+    release = version("pydftracer")
+    version = ".".join(release.split(".")[:2])
 except Exception:
-    version = '0.1'
-    release = '0.1.0'
+    version = "0.1"
+    release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'myst_parser',  # For Markdown support
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.mathjax",
+    "myst_parser",  # For Markdown support
 ]
 
 # Napoleon settings for Google/NumPy style docstrings
@@ -76,49 +75,49 @@ napoleon_attr_annotations = True
 
 # Add mappings for intersphinx - link to main DFTracer docs and Python docs
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'dftracer': ('https://dftracer.readthedocs.io/en/latest/', None),
+    "python": ("https://docs.python.org/3", None),
+    "dftracer": ("https://dftracer.readthedocs.io/en/latest/", None),
 }
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
 # The suffix(es) of source filenames.
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
 
 # Theme options
 html_theme_options = {
-    'navigation_depth': 4,
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'includehidden': True,
-    'titles_only': False
+    "navigation_depth": 4,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "includehidden": True,
+    "titles_only": False,
 }
 
 # -- Options for autodoc -----------------------------------------------------
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
 
 # Use type stubs (.pyi files) for documentation
-autodoc_typehints = 'description'
-autodoc_typehints_description_target = 'documented'
+autodoc_typehints = "description"
+autodoc_typehints_description_target = "documented"
 
 # -- Options for todo extension ----------------------------------------------
 todo_include_todos = True
