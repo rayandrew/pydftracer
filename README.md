@@ -1,9 +1,11 @@
 # pydftracer
 
+[![Documentation Status](https://readthedocs.org/projects/pydftracer/badge/?version=latest)](https://dftracer.readthedocs.io/projects/pydftracer/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-A no operation (**No-Op**) Python binding for [DFTracer](https://github.com/hariharan-devarajan/dftracer) that provides seamless API compatibility without requiring the full DFTracer installation. Perfect for testing, development, and environments where you want to use DFTracer's API without the overhead of actual tracing.
+A lightweight, typed Python interface for [DFTracer](https://github.com/LLNL/dftracer). 
+Ideal for prototyping, testing, and iterating on code that uses the DFTracer Python API before deploying the complete tracing stack.
 
 ## Purposes
 
@@ -14,8 +16,6 @@ A no operation (**No-Op**) Python binding for [DFTracer](https://github.com/hari
 
 ```bash
 pip install dftracer
- # with libdftracer and dftracer_utils
-pip install dftracer[full]
 ```
 
 ## Development
@@ -37,6 +37,19 @@ pytest tests/ --cov=dftracer --cov-report=term-missing -v -n 4  # Tests with cov
 ```
 
 ## Documentation
+
+Full documentation is available at [Read the Docs](https://dftracer.readthedocs.io/projects/utils/).
+
+To build documentation locally:
+
+```bash
+pip install .
+cd docs
+pip install -r requirements.txt
+make html
+```
+
+Furthermore, if you want to enable profiling, please see resources below:
 
 * Building DFTracer: [https://dftracer.readthedocs.io/en/latest/build.html](https://dftracer.readthedocs.io/en/latest/build.html)
 * Integrating DFTracer: [https://dftracer.readthedocs.io/en/latest/examples.html](https://dftracer.readthedocs.io/en/latest/examples.html)
