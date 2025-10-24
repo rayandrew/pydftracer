@@ -12,16 +12,23 @@ except ImportError:
     TORCH_AVAILABLE = False
     torch = None  # type: ignore
 
-if DFTRACER_ENABLE and TORCH_AVAILABLE:
+if TORCH_AVAILABLE:
     try:
         from functorch.compile import make_boxed_func
 
         # Alpha feature from: https://docs.pytorch.org/docs/stable/torch.compiler_custom_backends.html#custom-backends-after-aotautograd
         from torch._dynamo.backends.common import aot_autograd
     except ImportError:
-        raise RuntimeError(
-            "DFTracer dynamo requires PyTorch and functorch to be installed"
-        )
+        if DFTRACER_ENABLE:
+            raise RuntimeError(
+                "DFTracer dynamo requires PyTorch and functorch to be installed"
+            )
+        else:
+            make_boxed_func = None  # type: ignore
+            aot_autograd = None  # type: ignore
+else:
+    make_boxed_func = None  # type: ignore
+    aot_autograd = None  # type: ignore
 
 CAT_DYNAMO = "dynamo"
 
@@ -168,19 +175,30 @@ class Dynamo(DFTracerAI):
         - Uses PyTorch Dynamo to add nodes before and after each operation
         - The nodes are run before and after each operation -> providing detailed timing information
         """
+        if not TORCH_AVAILABLE:
+            raise RuntimeError(
+                "PyTorch is not available. Install PyTorch to use Dynamo integration."
+            )
+
         if not (DFTRACER_ENABLE and self.enable):  # type: ignore[truthy-function]
             return f_py  # type: ignore
+
+        if autograd and (aot_autograd is None or make_boxed_func is None):
+            raise RuntimeError(
+                "AOT autograd is not available. Either install required dependencies "
+                "or set autograd=False"
+            )
 
         def _decorator(func: Callable[P, R]) -> Callable[P, R]:
             def enhanced_trace_wrapper(gm: Any, example: Any, **kwargs: Any) -> Any:
                 """Enhanced custom trace function for Dynamo"""
                 instrumented_gm = self.add_enhanced_timing_to_graph(gm)
-                if autograd:
+                if autograd and make_boxed_func is not None:
                     return make_boxed_func(instrumented_gm.forward)
                 else:
                     return instrumented_gm.forward
 
-            if autograd:
+            if autograd and aot_autograd is not None:
                 return torch.compile(  # type: ignore
                     func, backend=aot_autograd(fw_compiler=enhanced_trace_wrapper)
                 )
@@ -198,4 +216,71 @@ class Dynamo(DFTracerAI):
 
 dynamo = Dynamo()
 
-__all__ = ["Dynamo", "dynamo"]
+
+def create_backend(
+    name: Optional[str] = None,
+    epoch: Optional[int] = None,
+    step: Optional[int] = None,
+    image_idx: Optional[int] = None,
+    image_size: Optional[Any] = None,
+    enable: bool = True,
+    autograd: bool = True,
+) -> Any:
+    """Create a torch.compile backend with DFTracer instrumentation.
+
+    Args:
+        name: Optional name for the tracer
+        epoch: Optional epoch number
+        step: Optional step number
+        image_idx: Optional image index
+        image_size: Optional image size
+        enable: Whether to enable tracing (default: True)
+        autograd: Whether to use autograd (default: True)
+
+    Returns:
+        A backend function that can be used with torch.compile
+
+    Example:
+        >>> import torch
+        >>> from dftracer.python.dynamo import create_backend
+        >>>
+        >>> # Create a custom backend
+        >>> backend = create_backend(name="my_model", epoch=0, step=0)
+        >>>
+        >>> # Use it with torch.compile
+        >>> model = torch.nn.Linear(10, 10)
+        >>> compiled_model = torch.compile(model, backend=backend)
+    """
+    if not TORCH_AVAILABLE:
+        raise RuntimeError("PyTorch is not available")
+
+    if autograd and (aot_autograd is None or make_boxed_func is None):
+        raise RuntimeError(
+            "AOT autograd is not available. Either install required dependencies "
+            "or set autograd=False"
+        )
+
+    tracer = Dynamo(
+        name=name,
+        epoch=epoch,
+        step=step,
+        image_idx=image_idx,
+        image_size=image_size,
+        enable=enable,
+    )
+
+    def backend(gm: Any, _example_inputs: Any, **_kwargs: Any) -> Any:
+        """Backend function for torch.compile"""
+        instrumented_gm = tracer.add_enhanced_timing_to_graph(gm)
+        if autograd and make_boxed_func is not None:
+            return make_boxed_func(instrumented_gm.forward)
+        else:
+            return instrumented_gm.forward
+
+    if autograd and aot_autograd is not None:
+        return aot_autograd(fw_compiler=backend)
+    else:
+        return backend
+
+
+__all__ = ["Dynamo", "dynamo", "create_backend"]

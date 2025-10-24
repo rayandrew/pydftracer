@@ -46,7 +46,7 @@ Using the Dynamo Decorator
 Basic Model Tracing
 ~~~~~~~~~~~~~~~~~~~
 
-The simplest way to use Dynamo integration is with the ``@dynamo.compile`` decorator:
+The simplest way to use Dynamo integration is with the :meth:`@dynamo.compile <dftracer.python.Dynamo.compile>` decorator:
 
 .. code-block:: python
 
@@ -83,10 +83,58 @@ The simplest way to use Dynamo integration is with the ``@dynamo.compile`` decor
 Advanced Configuration
 ----------------------
 
+Using create_backend with torch.compile
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :func:`~dftracer.python.dynamo.create_backend` function provides a flexible way to use DFTracer as a custom backend for ``torch.compile()``:
+
+.. code-block:: python
+
+   import torch
+   from dftracer.python import dftracer
+   from dftracer.python.dynamo import create_backend
+
+   # Initialize logger
+   df_logger = dftracer.initialize_log("training.pfw", "/tmp/data", -1)
+
+   # Create a custom DFTracer backend
+   backend = create_backend(
+       name="resnet50",
+       epoch=1,
+       step=100,
+       enable=True,
+       autograd=True  # Enable AOT autograd (default)
+   )
+
+   # Use with torch.compile
+   model = MyModel()
+   compiled_model = torch.compile(model, backend=backend)
+
+   # Run your model - operations will be traced
+   output = compiled_model(input_tensor)
+
+   df_logger.finalize()
+
+Backend Parameters
+~~~~~~~~~~~~~~~~~~
+
+The :func:`~dftracer.python.dynamo.create_backend` function accepts the following parameters:
+
+- ``name`` (str, optional): Name for the tracer (e.g., model name)
+- ``epoch`` (int, optional): Current epoch number
+- ``step`` (int, optional): Current training step
+- ``image_idx`` (int, optional): Image index being processed
+- ``image_size`` (tuple, optional): Size of input images
+- ``enable`` (bool): Whether to enable tracing (default: True)
+- ``autograd`` (bool): Whether to use AOT autograd (default: True)
+
+  - ``True``: Uses AOT autograd for detailed gradient-aware tracing (more events)
+  - ``False``: Bypasses AOT autograd for simpler forward-only tracing (fewer events)
+
 Custom Dynamo Tracer
 ~~~~~~~~~~~~~~~~~~~~
 
-For more control, create a custom Dynamo tracer instance:
+For more control, create a custom :class:`~dftracer.python.Dynamo` tracer instance:
 
 .. code-block:: python
 
@@ -102,14 +150,89 @@ For more control, create a custom Dynamo tracer instance:
        enable=True
    )
 
-   # Use in your training loop
-   # The tracer will automatically track operations
+   # Use with the compile decorator
+   @dynamo_tracer.compile
+   def forward(x):
+       # Your model code
+       return x
 
 Training Loop Integration
 -------------------------
 
-Complete Training Example
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Complete Training Example with create_backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example shows how to use :func:`~dftracer.python.dynamo.create_backend` in a training loop:
+
+.. code-block:: python
+
+   import torch
+   import torch.nn as nn
+   from dftracer.python import dftracer
+   from dftracer.python.dynamo import create_backend
+
+   # Initialize logger
+   df_logger = dftracer.initialize_log("training.pfw", "/tmp/data", -1)
+
+   # Model definition
+   class ConvNet(nn.Module):
+       def __init__(self):
+           super().__init__()
+           self.conv1 = nn.Conv2d(1, 32, 3, 1)
+           self.conv2 = nn.Conv2d(32, 64, 3, 1)
+           self.fc1 = nn.Linear(9216, 128)
+           self.fc2 = nn.Linear(128, 10)
+
+       def forward(self, x):
+           x = self.conv1(x)
+           x = torch.nn.functional.relu(x)
+           x = self.conv2(x)
+           x = torch.nn.functional.relu(x)
+           x = torch.nn.functional.max_pool2d(x, 2)
+           x = torch.flatten(x, 1)
+           x = self.fc1(x)
+           x = torch.nn.functional.relu(x)
+           x = self.fc2(x)
+           return x
+
+   # Training setup
+   model = ConvNet()
+   optimizer = torch.optim.Adam(model.parameters())
+   criterion = nn.CrossEntropyLoss()
+
+   # Training loop with per-epoch backends
+   for epoch in range(5):
+       # Create a backend for this epoch
+       backend = create_backend(
+           name="convnet",
+           epoch=epoch,
+           step=0,
+           enable=True,
+           autograd=True
+       )
+
+       # Compile model with the backend
+       compiled_model = torch.compile(model, backend=backend)
+
+       for batch_idx, (data, target) in enumerate(train_loader):
+           optimizer.zero_grad()
+
+           # Forward pass (traced by DFTracer backend)
+           output = compiled_model(data)
+
+           # Compute loss and backward
+           loss = criterion(output, target)
+           loss.backward()
+
+           # Optimizer step
+           optimizer.step()
+
+   df_logger.finalize()
+
+Using the Dynamo Decorator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Alternatively, use the :meth:`@dynamo.compile <dftracer.python.Dynamo.compile>` decorator for simpler usage:
 
 .. code-block:: python
 
@@ -120,7 +243,7 @@ Complete Training Example
    # Initialize logger
    df_logger = dftracer.initialize_log("training.pfw", "/tmp/data", -1)
 
-   # Model definition
+   # Model definition with decorator
    class ConvNet(nn.Module):
        def __init__(self):
            super().__init__()
@@ -264,4 +387,12 @@ The Dynamo integration provides:
 - **Easy to use** decorator-based API
 - **Compatible** with existing PyTorch code
 
-For complete API reference, see :doc:`api/dynamo`.
+API Reference
+-------------
+
+For complete API documentation, see:
+
+- :func:`dftracer.python.dynamo.create_backend` - Create custom torch.compile backends
+- :class:`dftracer.python.Dynamo` - Dynamo tracer class
+- :meth:`dftracer.python.Dynamo.compile` - Compile decorator method
+- :doc:`api/dynamo` - Full Dynamo API reference

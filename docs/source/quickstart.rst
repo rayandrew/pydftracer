@@ -125,19 +125,34 @@ AI/ML Tracing
 PyTorch Dynamo Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For PyTorch applications, use the Dynamo backend:
+For PyTorch applications, use the ``create_backend`` function to create a custom DFTracer backend for ``torch.compile``:
 
 .. code-block:: python
 
    import torch
-   from dftracer.python import dftracer_dynamo_backend
+   from dftracer.python import dftracer
+   from dftracer.python.dynamo import create_backend
 
-   # Use DFTracer as a PyTorch compile backend
+   # Initialize logger
+   df_logger = dftracer.initialize_log("model_trace.pfw", "/tmp/data", -1)
+
+   # Create a custom DFTracer backend
+   backend = create_backend(
+       name="my_model",
+       epoch=0,
+       step=0,
+       enable=True
+   )
+
+   # Use with torch.compile
    model = MyModel()
-   compiled_model = torch.compile(model, backend=dftracer_dynamo_backend)
+   compiled_model = torch.compile(model, backend=backend)
 
-   # Run your model
+   # Run your model - operations will be traced
    output = compiled_model(input_tensor)
+
+   # Finalize when done
+   df_logger.finalize()
 
 Dynamo Class
 ~~~~~~~~~~~~

@@ -27,6 +27,7 @@ def _worker_process(func_name, module_name, config, queue):
         sys.stderr.flush()
 
         result = test_func(config)
+        sys.stdout.flush()
 
         print("Test completed successfully", file=sys.stderr)
         sys.stderr.flush()
@@ -179,14 +180,18 @@ def run_test_in_spawn_process(test_func, test_config, timeout=120):
     )
 
 
-def validate_log_files(log_file, test_name, expected_count=0):
+def validate_log_files(log_file, test_name, expected_count=0, mode="exact"):
     """
     Validate DFTracer log files and return event count.
 
     Args:
         log_file: Path to the expected log file
         test_name: Name of the test (for error messages)
-        expected_count: Expected number of events (0 means just check > 5)
+        expected_count: Expected number of events (0 means just check > 5 for "exact" mode,
+                       or minimum count for "at_least" mode)
+        mode: Validation mode - "exact" (default) or "at_least"
+              - "exact": Event count must exactly match expected_count (or > 5 if expected_count=0)
+              - "at_least": Event count must be >= expected_count
 
     Returns:
         Tuple of (event_count, cpp_library_available)
@@ -244,7 +249,7 @@ def validate_log_files(log_file, test_name, expected_count=0):
     print(f"Test {test_name} completed with {event_count} events")
 
     # Assertions
-    print(f"Expected event count: {expected_count}")
+    print(f"Expected event count: {expected_count} (mode: {mode})")
     if not DFTRACER_ENABLE:
         assert event_count == 0, (
             f"Expected 0 events when DFTRACER_ENABLE=0 but got {event_count} for test {test_name}"
@@ -253,14 +258,28 @@ def validate_log_files(log_file, test_name, expected_count=0):
         assert event_count == 0, (
             f"Expected 0 events when C++ library not available but got {event_count} for test {test_name}"
         )
-    elif expected_count > 0:
-        assert event_count == expected_count, (
-            f"Expected {expected_count} events but got {event_count} for test {test_name}"
-        )
+    elif mode == "at_least":
+        # For "at_least" mode, event_count must be >= expected_count
+        if expected_count > 0:
+            assert event_count >= expected_count, (
+                f"Expected at least {expected_count} events but got {event_count} for test {test_name}"
+            )
+        else:
+            assert event_count > 5, (
+                f"Expected at least some events (> 5) but got {event_count} for test {test_name}"
+            )
+    elif mode == "exact":
+        # For "exact" mode, event_count must exactly match expected_count
+        if expected_count > 0:
+            assert event_count == expected_count, (
+                f"Expected exactly {expected_count} events but got {event_count} for test {test_name}"
+            )
+        else:
+            assert event_count > 5, (
+                f"Expected some events (> 5) but got {event_count} for test {test_name}"
+            )
     else:
-        assert event_count > 5, (
-            f"Expected some events but got {event_count} for test {test_name}"
-        )
+        raise ValueError(f"Invalid mode '{mode}'. Must be 'exact' or 'at_least'")
 
     return event_count, cpp_library_available
 
