@@ -37,6 +37,7 @@ AI/ML Support
 - ``DFTracerAI`` - Base class for AI/ML tracing
 - ``Dynamo`` - PyTorch Dynamo integration class
 - ``dynamo`` - Pre-configured Dynamo instance for tracing
+- ``create_backend`` - Create a custom torch.compile backend with DFTracer
 
 Configuration
 ~~~~~~~~~~~~~
