@@ -45,6 +45,9 @@ dev = [
     "pillow",
     "ruff",
     "mypy",
+    "torch>=2.5.1",
+    "torchvision",
+    "tensorboard",
 ]
 dynamo = [
     "torch>=2.5.1"
@@ -125,6 +128,8 @@ ignore = [
 "python/dftracer/python/ai_init.py" = ["F405"]
 "python/dftracer/python/common.py" = ["E701", "F405"]
 "python/dftracer/python/dynamo.py" = ["B904"]
+"python/dftracer/python/torch/profiler.py" = ["E402"]
+"python/dftracer/python/dbg/torch/profiler.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.9"
