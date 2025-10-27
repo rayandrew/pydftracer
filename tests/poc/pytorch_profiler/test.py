@@ -11,7 +11,7 @@ from torchvision.datasets import CIFAR10
 
 # 2. End-to-End Execution with Profiler
 if __name__ == "__main__":
-    df_logger = dftracer.initialize_log("test.pfw", "all", -1)
+    df_logger = dftracer.initialize_log("test.pfw", None, -1)
     print("Logger initialized")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
