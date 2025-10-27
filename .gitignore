@@ -213,3 +213,7 @@ tests/*_output
 tests/*.pfw
 
 _version.py
+*venv*
+data
+*.core
+*nfs*

@@ -1,0 +1,5 @@
+-i https://download.pytorch.org/whl/rocm6.3 
+--extra-index-url https://pypi.org/simple
+torch==2.8.0
+torchvision
+tensorboard
