@@ -2,7 +2,7 @@ import os
 import shutil
 
 import pytest
-from dftracer.python import dftracer, dynamo
+from dftracer.python.dbg import dftracer, dynamo
 from dftracer.python.dynamo import create_backend
 
 from .utils import run_test_in_spawn_process, validate_log_files
