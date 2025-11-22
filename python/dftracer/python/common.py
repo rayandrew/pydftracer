@@ -253,15 +253,15 @@ class dftracer:
 
     def enter_event(self) -> None:
         if DFTRACER_ENABLE and self.logger:
-            self.logger.enter_event()
             if self.dbg_logging:
                 self.dbg_logging.debug("logger.enter_event")
+            return self.logger.enter_event()
 
     def exit_event(self) -> None:
         if DFTRACER_ENABLE and self.logger:
-            self.logger.exit_event()
             if self.dbg_logging:
                 self.dbg_logging.debug("logger.exit_event")
+            self.logger.exit_event()
 
     def log_event(
         self,
@@ -537,6 +537,7 @@ class dft_fn:
         if DFTRACER_ENABLE and self._enable:
             _name = f"{name}.iter"
             kernel_name = f"{name}.yield"
+            dftracer.get_instance().enter_event()
             start = dftracer.get_instance().get_time()
             self._arguments_int = {}
             self._arguments_float = {}
@@ -545,14 +546,9 @@ class dft_fn:
         for v in func:
             if DFTRACER_ENABLE and self._enable:
                 end = dftracer.get_instance().get_time()
-                t0 = dftracer.get_instance().get_time()
-            yield v
-            if DFTRACER_ENABLE and self._enable:
-                t1 = dftracer.get_instance().get_time()
                 self._arguments_int[iter_name] = TagValue(
                     iter_val, TagDType.INT, TagType.KEY
                 ).value()
-                dftracer.get_instance().enter_event()
                 dftracer.get_instance().log_event(
                     name=_name,
                     cat=self._cat,
@@ -564,6 +560,10 @@ class dft_fn:
                 )
                 dftracer.get_instance().exit_event()
                 dftracer.get_instance().enter_event()
+                t0 = dftracer.get_instance().get_time()
+            yield v
+            if DFTRACER_ENABLE and self._enable:
+                t1 = dftracer.get_instance().get_time()
                 dftracer.get_instance().log_event(
                     name=kernel_name,
                     cat=self._cat,
@@ -576,7 +576,11 @@ class dft_fn:
                 dftracer.get_instance().exit_event()
 
                 iter_val += 1
+                dftracer.get_instance().enter_event()
                 start = dftracer.get_instance().get_time()
+
+        if DFTRACER_ENABLE and self._enable:
+            dftracer.get_instance().exit_event()
 
     @overload
     def log_init(
