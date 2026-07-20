@@ -49,6 +49,10 @@ class ProfilerProtocol(Protocol):
         """Get current time for profiling."""
         ...  # pragma: no cover
 
+    def get_config(self, key: str) -> str:
+        """Generic config lookup by DFTRACER_* env var key name."""
+        ...  # pragma: no cover
+
     def enter_event(self) -> None:
         """Mark entry into an event."""
         ...  # pragma: no cover
@@ -92,6 +96,9 @@ class NoOpProfiler:
 
     def get_time(self) -> int:
         return 0
+
+    def get_config(self, key: str) -> str:
+        return ""
 
     def enter_event(self) -> None:
         pass
@@ -160,6 +167,39 @@ class TagValue:
 
     def value(self) -> TagValueTuple:
         return (int(self._tag_type), self._value)
+
+
+# Units of each DFTRACER_TIME_METRIC value (NS/US/MS/SEC) per second.
+# Mirrors dftracer::time_metric_units_per_second() in
+# include/dftracer/core/common/enumeration.h — keep in sync with that table.
+_TIME_METRIC_UNITS_PER_SECOND = {
+    "NS": 1e9,
+    "US": 1e6,
+    "MS": 1e3,
+    "SEC": 1.0,
+}
+_DEFAULT_TIME_METRIC = "US"
+
+
+def get_time_scale() -> float:
+    """Units-per-second of dftracer's currently configured time metric.
+
+    dftracer's own get_time() (used by every dft_fn/log_event call) returns
+    wall-clock time in whatever unit DFTRACER_TIME_METRIC selects (default
+    microseconds). Any external tool integration with its own absolute
+    epoch clock — the PyTorch profiler/kineto trace_start_ns(), a
+    torch._dynamo hook, or any future integration — must scale its own
+    epoch-nanosecond timestamps by this same factor before calling
+    log_event(), or its events land on a different time scale than the
+    rest of the trace. Example:
+
+        scale = get_time_scale()
+        dftracer_ts = epoch_ns * scale / 1e9
+    """
+    metric = dftracer.get_instance().get_config(DFTRACER_TIME_METRIC_ENV)
+    return _TIME_METRIC_UNITS_PER_SECOND.get(
+        metric, _TIME_METRIC_UNITS_PER_SECOND[_DEFAULT_TIME_METRIC]
+    )
 
 
 def capture_signal(signal_number: int, frame: Any) -> None:
@@ -251,6 +291,14 @@ class dftracer:
                 self.dbg_logging.debug(f"logger.get_time {t}")
             return t
         return 0
+
+    def get_config(self, key: str) -> str:
+        if DFTRACER_ENABLE and self.logger:
+            v = self.logger.get_config(key)
+            if self.dbg_logging:
+                self.dbg_logging.debug(f"logger.get_config {key} {v}")
+            return v
+        return ""
 
     def enter_event(self) -> None:
         if DFTRACER_ENABLE and self.logger:
